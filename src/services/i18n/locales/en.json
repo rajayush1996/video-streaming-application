@@ -1,0 +1,6 @@
+{
+    "OTP_VERIFICATION_ERROR": "Otp is already verified",
+    "MOB_NUM_FORMATS_ERROR": "Error in mobile number format",
+    "PHONE_NUMBER_ERROR": "Phone number not found!",
+    "PHONE_OTP_ERROR": "Phone otp not found!"
+}
