@@ -16,7 +16,7 @@ async function verifyOtpUser(req, res, next) {
 async function sendOtpUser(req, res, next) {
     try {
         const {body} = req;
-        const result = await AuthService.sendOtpMessage(body);
+        const result = await AuthService.sendOtpToEmail(body);
         if (result) {
             return res.status(httpStatus.OK).json({message: 'otp send successfully!'});
         }

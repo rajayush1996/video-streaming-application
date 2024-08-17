@@ -34,6 +34,16 @@ class UserService {
         }
     }
 
+    async getUserByEmail(email, options = {}, projection = {}) {
+        try {
+            options.email = email;
+            options.isActive = true; // Assuming you only want to fetch active users
+            return await User.findOne(options).select(projection);
+        } catch (error) {
+            throw error;
+        }
+    }
+
     // Update user information
     async updateUser(userId, userData) {
         try {
