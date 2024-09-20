@@ -26,15 +26,14 @@ const userSchema = new Schema(
         phoneNumber: {
             countryCode: {
                 type: String,
-                required: false,
+                required: false, // Optional country code
             },
             number: {
                 type: String,
-                required: false,
+                required: false, // Optional phone number
                 trim: true,
                 unique: true,
             },
-            required: false,
         },
         email: {
             type: String,

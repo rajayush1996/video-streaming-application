@@ -12,13 +12,13 @@ EXPOSE 3000
 CMD ["node", "src/bin/www"]
 
 # For building Docker image
-# docker build -t astro-bharat .
+# docker build -t starzopp .
 
 # TO start docker container
-# docker run -p 3000:3000 astro-bharat
+# docker run -p 3000:3000 starzopp
 
 # To stop docker container
-# docker stop astro-bharat
+# docker stop starzopp
 
 # To remove Docker image
-# docker rmi astro-bharat
+# docker rmi starzopp
