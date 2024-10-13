@@ -1,0 +1,50 @@
+{
+    "config": {
+      "ENV": {
+        "APP_HOST": "http://localhost",
+        "WEBHOOK_HOST": "http://localhost:8082",
+        "PORT": "8000",
+        "ENVIRONMENT": "development"
+      },
+      "DATABASE": {
+        "TYPE": "mongodb",
+        "URL": "mongodb://127.0.0.1:27017/",
+        "PORT": 27017,
+        "DBNAME": "starzopp_feed",
+        "MONGO_AUTHENTICATION_ENABLED": false
+      },
+      "DEBUG_MONGOOSE": true,
+      "REDIS": {
+        "HOST": "localhost",
+        "PORT": 6379,
+        "PASSWORD": "redis",
+        "SSL_ENABLED": false
+      },
+      "KAFKA": {
+        "HOST": "localhost",
+        "USER": "kafka",
+        "PASSWORD": "kafka",
+        "PORT": 5672
+      },
+      "SMTP": {
+        "HOST": "email-server",
+        "PORT": 587,
+        "USERNAME": "email-server-username",
+        "PASSWORD": "email-server-password",
+        "EMAIL_FROM": "support@yourapp.com"
+      },
+      "TWILIO": {
+        "ACCOUNT_SID": "ACCOUNT_SID",
+        "AUTH_TOKEN": "AUTH_TOKEN",
+        "MOB_NUMBER": "+12762855247"
+      },
+      "INTERNAL_APIS": {
+        "CONFIG_DOMAIN": "http://localhost:3001",
+        "API_KEY": "892aabb16324ffdc93560b1d82027ae451176870c747c3504b5145ddc4a0a082"
+      },
+      "AUTHENTICATION": {
+        "PRIVATE_KEY_PATH": "../private_keys",
+        "TOKEN_ALGORITHM": "HS256"
+      }
+    }
+}

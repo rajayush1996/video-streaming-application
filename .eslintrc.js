@@ -1,29 +1,25 @@
-/* eslint-disable no-mixed-spaces-and-tabs */
 module.exports = {
     env: {
-	  browser: true,
-	  es2021: true,
-	  node: true,
+        browser: true, // Enable browser environment
+        node: true, // Enable Node.js environment
+        es2021: true, // Enable ES2021 syntax
     },
-    extends: ['xo'],
     parserOptions: {
-	  ecmaVersion: 2021,
-	  sourceType: 'module',
+        ecmaVersion: 2022, // Specify the ECMAScript version (use numeric value for clarity)
+        sourceType: 'script', // Use 'script' for CommonJS; change to 'module' if using ES modules
     },
     rules: {
-	  // Add your custom rules here
-	  indent: ['error', 4], // Set the number of spaces or tabs you want to enforce
+        // Custom rules
+        indent: ['error', 4], // Enforce 4 spaces for indentation
+        'object-curly-spacing': ['error', 'always'], // Enforce spacing inside curly braces
+        'no-control-regex': 'off', // Turn off control character rule in regular expressions
     },
     overrides: [
-	  {
-            env: {
-		  node: true,
-            },
+        {
             files: ['.eslintrc.{js,cjs}'],
             parserOptions: {
-		  sourceType: 'script',
+                sourceType: 'script', // Treat these files as CommonJS
             },
-	  },
+        },
     ],
 };
-
