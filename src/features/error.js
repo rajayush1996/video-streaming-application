@@ -4,7 +4,7 @@ const logger = require('./logger');
 
 const mongoose = require('mongoose');
 const config = require('../../config/config');
-const {v4: uuidv4} = require('uuid');
+const { v4: uuidv4 } = require('uuid');
 
 class ApiError extends Error {
     constructor(statusCode, message, isOperational = true, stack = '') {
@@ -32,14 +32,14 @@ function errorConverter(err, req, res, next) {
     }
 
     if (error.message === 'ERR_TOKEN_EXPIRED') {
-        return res.status(401).json({error: [{msg: 'invalid access token', code: 'TOKEN_EXPIRED'}], code: 'TOKEN_EXPIRED'});
+        return res.status(401).json({ error: [{ msg: 'invalid access token', code: 'TOKEN_EXPIRED' }], code: 'TOKEN_EXPIRED' });
     }
 
     next(error);
 }
 
 function errorHandler(err, req, res, next) {
-    let {statusCode, message} = err;
+    let { statusCode, message } = err;
 
     if (_.includes([], []) && !err.isOperational) {
         statusCode = httpStatus.FORBIDDEN;
@@ -57,7 +57,7 @@ function errorHandler(err, req, res, next) {
     const response = {
         code: statusCode,
         message: (sanitizedMessage || '').trim(),
-        ...(isDevEnv && {stack: err.stack}),
+        ...(isDevEnv && { stack: err.stack }),
         method: req.method,
         url: req.originalUrl,
         timestamp: new Date().toISOString(),
@@ -69,8 +69,22 @@ function errorHandler(err, req, res, next) {
     res.status(statusCode).send(response);
 }
 
+function responseHandler(res, statusCode, message, data = null) {
+    const response = {
+        code: statusCode,
+        message,
+        ...(data && { data }), // Include data if provided
+        requestId: uuidv4(), // Optional: if you want a unique request ID
+        success: true,
+    };
+
+    res.status(statusCode).json(response);
+}
+
+
 module.exports = {
     ApiError,
     errorConverter,
     errorHandler,
+    responseHandler
 };

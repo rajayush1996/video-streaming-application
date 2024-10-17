@@ -39,10 +39,10 @@ const paginate = schema => {
         }
 
         if (options.lean === true) {
-            options.lean = {getters: true};
+            options.lean = { getters: true };
         }
 
-        const {projection = {}, lean = false} = options;
+        const { projection = {}, lean = false } = options;
 
         const page
       = options.page && parseInt(options.page, 10) > 0

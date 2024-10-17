@@ -18,7 +18,6 @@ const authenticated = (req, res, next) => {
 
     try {
         const tokenSecret = configStore.getConfigValue('publicKey') || '';
-        logger.info('public key secret: ' + tokenSecret);
         const decoded = verifyToken(token, tokenSecret);
         req.user = decoded;
         next();

@@ -7,11 +7,11 @@ const logger = winston.createLogger({
     format: winston.format.combine(
         winston.format.timestamp(),
         winston.format.json(),
-        winston.format.colorize({all: true}),
+        winston.format.colorize({ all: true }),
     ),
     transports: [
-        new winston.transports.File({filename: 'logs-error/error.log', level: 'error'}),
-        new winston.transports.File({filename: 'logs-error/combined.log'}),
+        new winston.transports.File({ filename: 'logs-error/error.log', level: 'error' }),
+        new winston.transports.File({ filename: 'logs-error/combined.log' }),
     ],
 });
 

@@ -1,24 +1,11 @@
 {
-    "/auth/signup": {
-      "post": {
-        "summary": "Register a new user",
-        "tags": ["Auth"],
-        "description": "This endpoint allows a new user to register."
-      }
-    },
-    "/auth/login": {
-      "post": {
-        "summary": "Log in an existing user",
-        "tags": ["Auth"],
-        "description": "This endpoint allows an existing user to log in."
-      }
-    },
-    "/users": {
-      "get": {
-        "summary": "Retrieve a list of users",
-        "tags": ["Users"],
-        "description": "This endpoint returns a list of users."
-      }
+  "/feed": {
+    "post": {
+      "summary": "Register a new feed",
+      "tags": [
+        "Feed"
+      ],
+      "description": "This endpoint allows a new user to register."
     }
   }
-  
+}

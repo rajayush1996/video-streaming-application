@@ -1,80 +1,92 @@
 // feed.controller.js
+const httpStatus = require('http-status');
+const { responseHandler } = require('../features/error');
 const FeedService = require('../services/feed.service');
 
 class FeedController {
     // Create Feed
     async createFeed(req, res, next) {
-        // console.log("🚀 ~ file: feed.controller.js:7 ~ FeedController ~ createFeed ~ req:", req);
         try {
-            const {
-                type,
-                authorId,
-                content,
-                visibility,
-                tags,
-            } = req.body;
-            const mediaPaths = [];
-            
             const feed = await FeedService.createFeed({
-                type,
-                authorId,
-                content,
-                visibility,
-                tags,
-                media: req.files
+                ...req.body,
+                media: req.files.length ? req.files: null
             });
-            res.status(201).json(feed);
+            const msg = "Feed created successfully";
+            return responseHandler(res, httpStatus.CREATED, msg, feed);
         } catch (error) {
-           next(error);
+            next(error);
         }
     }
 
     // Get Feed by ID
-    async getFeedById(req, res) {
+    async getFeedById(req, res, next) {
         try {
             const feed = await FeedService.getFeedById(req.params.id);
             if (!feed) {
-                return res.status(404).json({ message: 'Feed not found' });
+                return next(new ApiError(httpStatus.BAD_REQUEST, "Feed not found"));
             }
-            res.status(200).json(feed);
+            const msg = 'Feed by id fetched successfully'
+            return responseHandler(res, httpStatus.OK, msg, feed);
         } catch (error) {
-            res.status(500).json({ error: error.message });
+            next(error)
+        }
+    }
+
+    async getFeedByUserId(req, res, next) {
+        try {
+            const feed = await FeedService.getAllFeeds(req.params.authorId);
+            if (!feed) {
+                return next(new ApiError(httpStatus.BAD_REQUEST, "Feed not found"));
+            }
+            const msg = 'Feed by id fetched successfully'
+            return responseHandler(res, httpStatus.OK, msg, feed);
+        } catch (error) {
+            next(error)
         }
     }
 
     // Update Feed
-    async updateFeed(req, res) {
+    async updateFeed(req, res, next) {
         try {
             const updatedFeed = await FeedService.updateFeed(req.params.id, req.body);
             if (!updatedFeed) {
-                return res.status(404).json({ message: 'Feed not found' });
+                return next(new ApiError(httpStatus.BAD_REQUEST, "Feed not found"));
             }
-            res.status(200).json(updatedFeed);
+            const msg = "feed updated successfully!"
+            return responseHandler(res, httpStatus.OK, msg, updatedFeed);
         } catch (error) {
-            res.status(500).json({ error: error.message });
+            next(error)
         }
     }
 
     // Delete Feed
-    async deleteFeed(req, res) {
+    async deleteFeed(req, res, next) {
         try {
             const deletedFeed = await FeedService.deleteFeed(req.params.id);
             if (!deletedFeed) {
                 return res.status(404).json({ message: 'Feed not found' });
             }
-            res.status(200).json({ message: 'Feed deleted successfully' });
+            const msg = 'Feed deleted successfully'
+            return responseHandler(res, httpStatus.OK, msg, deletedFeed);
         } catch (error) {
-            res.status(500).json({ error: error.message });
+            next(error)
         }
     }
 
     // Get All Feeds
-    async getAllFeeds(req, res) {
+    async getAllFeeds(req, res, next) {
         try {
-            const feeds = await FeedService.getAllFeeds();
-            res.status(200).json(feeds);
+            const { authorId } = req.query;
+            console.log("----", authorId)
+            const query = {};
+            if (authorId) {
+                query.authorId = authorId;
+            }
+            const feeds = await FeedService.getAllFeeds(query);
+            const msg = "feeds details fetched succesfully !"
+            return responseHandler(res, httpStatus.OK, msg, feeds);
         } catch (error) {
-            res.status(500).json({ error: error.message });
+            next(error)
         }
     }
 }

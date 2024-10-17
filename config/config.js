@@ -29,6 +29,7 @@ const configEnv = config.get('config');
 const envVarsSchema = Joi.object({
     ENV: Joi.object({
         APP_HOST: Joi.string().required().description('The application host URL'),
+        STARZOPP_HOST: Joi.string().required().description('The Starzopp host URL'),
         WEBHOOK_HOST: Joi.string().required().description('The webhook host URL'),
         PORT: Joi.string().required().description('The application port'),
         ENVIRONMENT: Joi.string().required().description('The environment of the app'),
@@ -75,6 +76,7 @@ if (error) {
 const configuration = {
     env: {
         app_host: process.env.APP_HOST || envVars.APP_HOST,
+        starzopp_host: process.env.STARZOPP_HOST || envVars.ENV.STARZOPP_HOST,
         webhook_host: process.env.WEBHOOK_HOST || envVars.WEBHOOK_HOST,
         port: process.env.PORT || envVars.PORT,
         environment: process.env.ENVIRONMENT || envVars.ENVIRONMENT,

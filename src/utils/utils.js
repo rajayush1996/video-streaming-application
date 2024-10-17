@@ -30,9 +30,29 @@ const pick = (object, keys) => keys.reduce((obj, key) => {
 
     return obj;
 }, {});
+
+function formatDoc(doc) {
+    if (!doc) {
+        return doc;
+    }
+
+    const obj = doc.toObject ? doc.toObject() : doc;
+    delete obj.__v; 
+    obj.id = doc._id; 
+    delete obj._id; 
+    return obj;
+}
+
+function formatDocArray(docs) {
+    const data =  docs.map(eachDoc => formatDoc(eachDoc));
+    return data;
+}
+
 module.exports = {
     uuid,
     pick,
     generateRefreshTokenSecretKey,
     generateRandomString,
+    formatDoc,
+    formatDocArray
 };

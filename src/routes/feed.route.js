@@ -7,16 +7,11 @@ const { createFeedValidationSchema } = require('../validations/feed.validation')
 const multer = require('../middlewares/upload.middleware');
 /* GET users listing. */
 
-router.get('/', (req, res, next) => {
-    console.log("🚀 ~ file: feed.route.js:10 ~ router.get ~ req:", req);
-    try {  
-     res.send('respond with a resource');
-
-    } catch (err) {
-
-    }
-});
+router.get('/', FeedController.getAllFeeds);
 router.post('/',multer.array('files'), validate(createFeedValidationSchema), FeedController.createFeed)
+router.get('/:id', FeedController.getFeedById),
 
+router.put('/:id', FeedController.updateFeed),
 
 module.exports = router;
+ 

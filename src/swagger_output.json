@@ -5,7 +5,7 @@
     "description": "Automatically generated API documentation",
     "version": "1.0.0"
   },
-  "host": "undefined:undefined",
+  "host": "localhost:5000",
   "basePath": "/",
   "schemes": [
     "http"
@@ -32,9 +32,6 @@
           }
         ],
         "responses": {
-          "200": {
-            "description": "OK"
-          },
           "401": {
             "description": "Unauthorized"
           }
@@ -52,6 +49,38 @@
         "responses": {
           "401": {
             "description": "Unauthorized"
+          }
+        }
+      }
+    },
+    "/api/v1/files/{fileId}": {
+      "get": {
+        "description": "",
+        "parameters": [
+          {
+            "name": "fileId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "400": {
+            "description": "Bad Request"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "404": {
+            "description": "Not Found"
+          },
+          "500": {
+            "description": "Internal Server Error"
           }
         }
       }

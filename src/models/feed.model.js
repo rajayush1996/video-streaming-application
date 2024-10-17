@@ -20,7 +20,7 @@ const FeedSchema = new Schema({
     },
     content: {
         type: String,
-        required: true,
+        required: function() { return this.type === 'POST'; },
     },
     visibility: {
         type: String,
@@ -40,7 +40,8 @@ const FeedSchema = new Schema({
         default: 0,
     },
     media: {
-        type: [String],
+        type: [Object],
+        required: false,
     },
     tags: [{
         type: String, // Hashtags or relevant keywords
@@ -83,8 +84,37 @@ const FeedSchema = new Schema({
             ref: 'Comment',
         },
     }],
+    isDeleted: {
+        type: Boolean,
+        default: false,
+    },
+    title: {
+        type: String,
+        required: function() { return this.type === 'SHOW'; },
+    },
+    description: {
+        type: String,
+        required: function() { return this.type === 'SHOW'; },
+    },
+    date: {
+        type: Number, // Unix timestamp
+        required: function() { return this.type === 'SHOW'; },
+    },
+    phone: {
+        type: String,
+        required: function() { return this.type === 'SHOW'; },
+    },
+    email: {
+        type: String,
+        required: function() { return this.type === 'SHOW'; },
+    },
+    passType: {
+        type: String,
+        required: function() { return this.type === 'SHOW'; },
+    }
 }, {
-    timestamps: true
+    timestamps: true,
+    _id: false
 });
 
 // Add plugin that converts mongoose to json

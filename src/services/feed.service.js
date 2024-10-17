@@ -3,30 +3,35 @@ const utils = require('../utils');
 
 class FeedService {
     async createFeed(data) {
-        console.log("🚀 ~ file: feed.service.js:6 ~ FeedService ~ createFeed ~ data:", data);
+        // // // // // console.log("🚀 ~ file: feed.service.js:6 ~ FeedService ~ createFeed ~ data:", data);
         try {
-            const files = await utils.FileUploadUtils.uploadMultipleFiles(data.media);
-            const fileIds = files.map(file => file.fileId)
-            console.log("🚀 ~ file: feed.service.js:9 ~ FeedService ~ createFeed ~ fileIds:", fileIds);
-            data.media = fileIds;
+            if(data.media) {
+                const files = await utils.FileUploadUtils.uploadMultipleFiles(data.media);
+                data.media = files;
+            }
            
             const feedInfoDoc = await Feed.create(data);
             const feedInfo = feedInfoDoc.toObject(); // Converts to a plain JS object
-            const media = await utils.FileUploadUtils.generateFileUrls(files);
-            console.log("🚀 ~ file: feed.service.js:15 ~ FeedService ~ createFeed ~ media:", media);
-            const preparingPayload = {
+            let preparingPayload = {
                 ...feedInfo,
                 author: {
-                    id: feedInfo.id,
+                    id: feedInfo.authorId,
                     firstName: "Ayush",
                     lastName: "Raj",
                     email: "ayushraj709@gmail.com",
-                    imageUrl: "url",
+                    imageUrl: {
+                        url: "url",
+                        alt: "url"
+                    },
                     profession: "Businessman"
                 },
-                media,
+            }
+            if(data.media) {
+                const media = await utils.FileUploadUtils.generateFileUrls(data.media);
+                preparingPayload.media = media;
             }
             delete preparingPayload.authorId;
+            preparingPayload = utils.formatDoc(preparingPayload);
             return preparingPayload;
             // return true;
         } catch (error) {
@@ -36,7 +41,28 @@ class FeedService {
 
     async getFeedById(feedId) {
         try {
-            return await Feed.findById(feedId).populate('authorId').populate('mentions').populate('comments.commentId');
+            const feedDetails = await Feed.findOne({ _id: feedId, isDeleted: false }).lean(true);
+            let preparingPayload = {
+                ...feedInfo,
+                author: {
+                    id: feedInfo.authorId,
+                    firstName: "Ayush",
+                    lastName: "Raj",
+                    email: "ayushraj709@gmail.com",
+                    imageUrl: {
+                        url: "url",
+                        alt: "url"
+                    },
+                    profession: "Businessman"
+                },
+            };
+            if(data.media) {
+                const media = await utils.FileUploadUtils.generateFileUrls(data.media);
+                preparingPayload.media = media;
+            }
+            delete preparingPayload.authorId;
+            preparingPayload = utils.formatDoc(preparingPayload);
+            return preparingPayload;
         } catch (error) {
             throw new Error('Error fetching feed: ' + error.message);
         }
@@ -58,9 +84,33 @@ class FeedService {
         }
     }
 
-    async getAllFeeds() {
+    async getAllFeeds(filter) {
         try {
-            return await Feed.find().populate('authorId').populate('mentions').populate('comments.commentId');
+            const allFeeds = await Feed.paginate({ ...filter, isDeleted: false }, { lean: true });
+            const authorDetail = {
+                firstName: "Ayush",
+                lastName: "Raj",
+                email: "ayushraj709@gmail.com",
+                imageUrl: {
+                    url: "url",
+                    alt: "url"
+                },
+                profession: "Businessman"
+            }
+            
+            let preparingFeedDetails = await Promise.all((allFeeds.results || []).map(async (eachFeed) => {
+                eachFeed.author = authorDetail;
+                eachFeed.author.id = eachFeed.authorId;
+                delete eachFeed.authorId;
+                let media = []
+                if (eachFeed.media) {
+                    media = await utils.FileUploadUtils.generateFileUrls(eachFeed.media);
+                }
+                return { ...eachFeed, media };
+            }));
+            preparingFeedDetails = utils.formatDocArray(preparingFeedDetails);
+            allFeeds.results = preparingFeedDetails;
+            return allFeeds;
         } catch (error) {
             throw new Error('Error fetching all feeds: ' + error.message);
         }

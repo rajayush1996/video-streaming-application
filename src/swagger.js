@@ -14,6 +14,9 @@ const doc = {
     paths: {}, // Ensure paths is initialized
 };
 
+console.log("🚀 ~ file: swagger.js:14 ~ config.env.starzopp_host:", config.env.starzopp_host);
+console.log("🚀 ~ file: swagger.js:14 ~ config.env.port:", config.env.port);
+
 function injectSwaggerMetadata(doc, metadata) {
     for (const path in metadata) {
         if (Object.prototype.hasOwnProperty.call(metadata, path)) {
@@ -36,5 +39,5 @@ function injectSwaggerMetadata(doc, metadata) {
 injectSwaggerMetadata(doc, metadata);
 
 swaggerAutogen(outputFile, endpointsFiles, doc).then(() => {
-    require('./app');
+    require('./app.js', './routes/*.js');
 });

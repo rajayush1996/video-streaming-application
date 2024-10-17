@@ -2,6 +2,7 @@
     "config": {
       "ENV": {
         "APP_HOST": "http://localhost",
+        "STARZOPP_HOST": "localhost",
         "WEBHOOK_HOST": "http://localhost:8082",
         "PORT": "8000",
         "ENVIRONMENT": "development"
