@@ -1,16 +1,32 @@
-version: '3.9'
+version: '3.8'
 
 services:
-  web:
-    build: .
+  # MongoDB Service
+  mongo:
+    image: mongo:latest
+    container_name: mongo_starzopp_feed
     ports:
-      - '3000:3000'
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+    command: ["mongod", "--bind_ip_all"]
 
-  database:
-    image: mongo:5.0-alpine
+  # Node.js Application Service
+  app:
+    build: .
+    container_name: starzopp_auth_service
+    depends_on:
+      - mongo
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=development
+      - DATABASE_TYPE=mongodb
+      - DATABASE_URL=mongodb://mongo:27017/starzopp_feed
+      - DATABASE_PORT=27017
+      - MONGO_AUTHENTICATION_ENABLED=false
+      - DEBUG_MONGOOSE=true
+    restart: unless-stopped
 
-# To start the Docker services
-# docker-compose up -d
-
-# To stop the Docker services
-# docker-compose down
+volumes:
+  mongo_data:

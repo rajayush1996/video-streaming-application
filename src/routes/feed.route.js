@@ -10,7 +10,6 @@ const multer = require('../middlewares/upload.middleware');
 router.get('/', FeedController.getAllFeeds);
 router.post('/',multer.array('files'), validate(createFeedValidationSchema), FeedController.createFeed)
 router.get('/:id', FeedController.getFeedById),
-
 router.put('/:id', FeedController.updateFeed),
 
 module.exports = router;
