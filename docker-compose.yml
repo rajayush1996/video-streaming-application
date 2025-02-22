@@ -4,7 +4,7 @@ services:
   # MongoDB Service
   mongo:
     image: mongo:latest
-    container_name: mongo_starzopp_feed
+    container_name: mongo_vsa
     ports:
       - "27017:27017"
     volumes:
@@ -14,7 +14,7 @@ services:
   # Node.js Application Service
   app:
     build: .
-    container_name: starzopp_auth_service
+    container_name: vsa_auth_service
     depends_on:
       - mongo
     ports:
@@ -22,7 +22,7 @@ services:
     environment:
       - NODE_ENV=development
       - DATABASE_TYPE=mongodb
-      - DATABASE_URL=mongodb://mongo:27017/starzopp_feed
+      - DATABASE_URL=mongodb://mongo:27017/vsa_feed
       - DATABASE_PORT=27017
       - MONGO_AUTHENTICATION_ENABLED=false
       - DEBUG_MONGOOSE=true

@@ -1,6 +1,7 @@
 const mongoose = require('mongoose');
 const logger = require('../features/logger');
 const config = require('../../config/config');
+const seedEmailProviders = require('../seeds/emailProvider.seed');
 
 const connectDB = async () => {
     try {
@@ -9,8 +10,8 @@ const connectDB = async () => {
         if (config.debug_mongoose) {
             mongoose.set('debug', true);
         }
-
         logger.info('db connected');
+        await seedEmailProviders();
     } catch (err) {
         logger.error('db error', err);
     }

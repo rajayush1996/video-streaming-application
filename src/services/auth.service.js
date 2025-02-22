@@ -1,154 +1,170 @@
-
-const _ = require('lodash');
-const logger = require('../features/logger');
-const config = require('../../config/config');
-const i18nUtil = require('../services/i18n');
-const UserService = require('./user.service');
-const {generateOTP} = require('../utils/otp.util');
 const jwt = require('jsonwebtoken');
-const {ApiError} = require('../features/error');
-const httpStatus = require('http-status');
-const nodemailer = require('nodemailer');
 const bcrypt = require('bcryptjs');
-const {authentication, otpVerification} = config;
-
-// Mock database to store OTPs temporarily
-
-// Configure the email transport using nodemailer
-const transporter = nodemailer.createTransport({
-    service: 'Gmail',
-    auth: {
-        user: otpVerification.email_user, // Your email
-        pass: otpVerification.email_pass, // Your email password
-    },
-});
+const UserService = require('./user.service');
+const { sendEmail } = require('../utils/transporter.util');
+const { ApiError } = require('../features/error');
+const httpStatus = require('http-status');
+const logger = require('../features/logger');
+const { authentication, emailVerification } = require('../../config/config');
+const { v4: uuidv4 } = require('uuid');
 
 class AuthService {
-    // Function to send OTP via email
-    async sendOtpToEmail(body, language) {
+    // User Signup (With Email Verification)
+    async signUpUser(body) {
         try {
-            const appLanguage = _.get(language, 'en');
-            const {email} = body;
+            const { email, password, role = 'USER' } = body;
 
-            if (!email) {
-                throw new ApiError(httpStatus.BAD_REQUEST, i18nUtil.getLocaleValue('EMAIL_FORMAT_ERROR', appLanguage));
-            }
-
-            const otp = generateOTP();
-            const expireTime = 10; // Expire time in minutes
-            const otpMessage = `Your OTP for TheAstroBharat: ${otp}\n\nValid for ${expireTime} minutes. Use it to verify your email.\n\nTheAstroBharat Team`;
-
-            // Hash the OTP
-            const hashedOtp = await hashOtp(otp);
-
-            // Prepare user payload
-            const userPayload = {
-                hashedOtp,
-                email,
-            };
-
-            // Check if the user already exists and is verified
+            // Check if email already exists
             const existingUser = await UserService.getUserByEmail(email);
-            if (existingUser && existingUser.isEmailVerified) {
-                throw new ApiError(httpStatus.CONFLICT, i18nUtil.getLocaleValue('OTP_VERIFICATION_ERROR', appLanguage));
+            if (existingUser) {
+                throw new ApiError(httpStatus.CONFLICT, 'Email already exists.');
             }
 
-            // Send OTP email
-            const mailOptions = {
-                from: otpVerification.email_user,
-                to: email,
-                subject: 'Your OTP Code',
-                text: otpMessage,
+            // Hash password
+            const hashedPassword = await bcrypt.hash(password, authentication.saltRounds);
+
+
+            // Generate email verification token
+            const emailVerificationToken = uuidv4();
+            const emailVerificationExpires = new Date(Date.now() + 2 * 60 * 1000); // 2 minute
+
+            // Create user with `isEmailVerified = false`
+            const newUser = await UserService.createUser({
+                email,
+                password: hashedPassword,
+                role,
+                isEmailVerified: false,
+                emailVerificationToken,
+                emailVerificationExpires
+            });
+
+            // Send email verification link
+            const verificationUrl = `${emailVerification.verification_url}/api/v1/auth/verify-email?token=${emailVerificationToken}`;
+            await sendEmail(email, "Verify Your Email", `Click the link to verify: ${verificationUrl}`);
+
+            return {
+                message: 'User registered successfully. A verification link has been sent to your email.',
             };
-
-            const sendEmailP = transporter.sendMail(mailOptions);
-            const updateUserP = UserService.updateByEmail(email, userPayload);
-            const result = await Promise.all([sendEmailP, updateUserP]);
-
-            // Ensure email was sent successfully
-            if (!result[0].accepted.includes(email)) {
-                throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, 'Failed to send OTP email.');
-            }
-
-            logger.info(`OTP sent to email: ${email}`);
-            return {message: 'OTP sent successfully!'};
-        } catch (err) {
-            logger.error('Error in sendOtpToEmail service:', err);
-            throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, err.message);
+        } catch (error) {
+            logger.error(error);
+            throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, error.message);
         }
     }
 
-    // Function to verify OTP
-    async verifyOtpUser(body, language) {
+    // Verify Email Link
+    async verifyEmail(token) {
         try {
-            const appLanguage = _.get(language, 'en');
-            const userDetails = await UserService.getUserByMobNumber(body.mobNumber);
-
-            if (!userDetails || !body.mobNumber) {
-                const err = new ApiError(httpStatus.NOT_FOUND, i18nUtil.getLocaleValue('PHONE_NUMBER_ERROR', appLanguage));
-                throw err;
+            const user = await UserService.getUserByVerificationToken(token);
+            if (!user) {
+                throw new ApiError(httpStatus.NOT_FOUND, 'Invalid or expired verification link.');
             }
 
-            if (!body.phoneOtp) {
-                const err = new ApiError(httpStatus.NOT_FOUND, i18nUtil.getLocaleValue('PHONE_OTP_ERROR', appLanguage));
-                throw err;
+            // Check if the token has expired
+            if (new Date() > user.emailVerificationExpires) {
+                throw new ApiError(httpStatus.UNAUTHORIZED, 'Verification link has expired. Please request a new one.');
             }
 
-            const isOTPValid = await compareOtp(body.phoneOtp, userDetails.hashedOtp);
-
-            if (!isOTPValid) {
-                const err = new ApiError(httpStatus.UNAUTHORIZED, {status: false, message: 'UNAUTHORIZED'});
-                throw err;
-            }
-
-            body.isOtpVerified = true;
-            body.hashedOtp = null;
-            const updatesUserDetails = await UserService.updateByMobNumber(body.mobNumber, body);
-            // SENDING BACK TO TOKEN
-            const jwtToken = jwt.sign({mobNumber: updatesUserDetails.mobNumber}, authentication.refresh_token_secret_key, {
-                expiresIn: authentication.jwt_token_expiration,
-                algorithm: authentication.token_algortihm,
-                issuer: authentication.jwt_token_issuer,
+            // Mark user as verified
+            await UserService.updateUser(user._id, {
+                isEmailVerified: true,
+                emailVerificationToken: null,
+                emailVerificationExpires: null,
             });
-            const refreshToken = jwt.sign({_id: updatesUserDetails._id}, authentication.jwt_token_secret_key, {
-                expiresIn: authentication.refresh_token_expiration,
-                algorithm: authentication.token_algortihm,
-                issuer: authentication.refresh_token_issuer,
-            });
-            const responsePayload = {
-                message: 'SUCCESS',
-                status: true,
-                usersInfo: {
-                    phoneNumber: updatesUserDetails.phoneNumber,
-                    isOtpVerified: updatesUserDetails.isOtpVerified,
-                    role: body.role || 'CUSTOMER',
-                    id: updatesUserDetails._id,
-                },
-                accessToken: {
-                    token: jwtToken,
-                    expiresIn: authentication.jwt_token_expiration,
-                },
-                refreshToken: {
-                    token: refreshToken,
-                    expireIn: authentication.refresh_token_expiration,
-                },
-            };
-            return responsePayload;
-        } catch (err) {
-            logger.error(err);
-            throw err;
+
+            return { message: 'Email verified successfully. You can now log in.', success: true };
+        } catch (error) {
+            logger.error(error);
+            throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, error.message);
         }
+    }
+
+    // Resend Verification Email
+    async resendVerificationEmail(body) {
+        try {
+            const { email } = body;
+            const user = await UserService.getUserByEmail(email);
+            if (!user) throw new ApiError(httpStatus.NOT_FOUND, 'User not found.');
+
+            if (user.isEmailVerified) {
+                throw new ApiError(httpStatus.BAD_REQUEST, 'Email is already verified.');
+            }
+
+            // Generate new verification token
+            const emailVerificationToken = uuidv4();
+            const emailVerificationExpires = new Date(Date.now() + 15 * 60 * 1000);
+            await UserService.updateUser(user._id, { emailVerificationToken, emailVerificationExpires });
+
+            const verificationUrl = `${emailVerification.verification_url}/api/v1/auth/verify-email?token=${emailVerificationToken}`;
+            await sendEmail(email, "Verify Your Email", `Click the link to verify: ${verificationUrl}`);
+
+            return { message: 'Verification email resent successfully.', success: true };
+        } catch (error) {
+            logger.error(error);
+            throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, error.message);
+        }
+    }
+
+    // User SignIn
+    async signInUser(body) {
+        try {
+            const { email, password } = body;
+
+            // Check if user exists
+            const user = await UserService.getUserByEmail(email);
+            if (!user) {
+                throw new ApiError(httpStatus.NOT_FOUND, 'User not found.');
+            }
+
+            // Validate password
+            const isPasswordValid = await bcrypt.compare(password, user.password);
+            if (!isPasswordValid) {
+                throw new ApiError(httpStatus.UNAUTHORIZED, 'Invalid credentials.');
+            }
+
+            // Check if email is verified
+            if (!user.isEmailVerified) {
+                throw new ApiError(httpStatus.FORBIDDEN, 'Please verify your email before logging in.');
+            }
+
+            // Generate JWT tokens
+            const tokens = this.generateAuthTokens(user);
+
+            return {
+                message: 'User logged in successfully',
+                user: {
+                    id: user._id,
+                    email: user.email,
+                    role: user.role,
+                },
+                tokens,
+            };
+        } catch (error) {
+            logger.error(error);
+            throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, error.message);
+        }
+    }
+
+    // Generate JWT Tokens
+    generateAuthTokens(user) {
+        const payload = { id: user._id, email: user.email, role: user.role };
+
+        const accessToken = jwt.sign(payload, authentication.jwt_secret_key, {
+            expiresIn: authentication.jwt_token_expiration,
+            algorithm: authentication.token_algorithm,
+            issuer: authentication.jwt_token_issuer,
+        });
+
+        const refreshToken = jwt.sign(payload, authentication.jwt_refresh_secret_key, {
+            expiresIn: authentication.refresh_token_expiration,
+            algorithm: authentication.token_algorithm,
+            issuer: authentication.jwt_refresh_issuer,
+        });
+
+        return {
+            accessToken,
+            refreshToken,
+        };
     }
 }
-
-const hashOtp = async function (otp) {
-    const saltRounds = await bcrypt.genSalt(config.authentication.salt);
-    const hashedOtp = await bcrypt.hashSync(otp, saltRounds);
-    return hashedOtp;
-};
-
-const compareOtp = async function (otp, hashedOtp) {
-    return bcrypt.compareSync(otp, hashedOtp);
-};
 
 module.exports = new AuthService();

@@ -8,7 +8,6 @@ class UserService {
     async createUser(userData) {
         try {
             const user = new User(userData);
-            await AuthService.sendOtpMessage(userData);
             return await user.save();
         } catch (error) {
             throw error;
@@ -41,14 +40,14 @@ class UserService {
             return await User.findOne(options).select(projection);
         } catch (error) {
             throw error;
-        }
+        } 
     }
 
     // Update user information
     async updateUser(userId, userData) {
         try {
-            const options = {new: true, upsert: true};
-            return await User.updateOne({_id: userId}, userData, options);
+            const options = { new: true, upsert: true };
+            return await User.updateOne({ _id: userId }, userData, options);
         } catch (error) {
             throw error;
         }
@@ -57,7 +56,7 @@ class UserService {
     async updateByMobNumber(mobNumber, userData) {
         try {
             // Check if the document with mobNumber exists in the database
-            const existingUser = await User.findOne({mobNumber});
+            const existingUser = await User.findOne({ mobNumber });
 
             // If an existing document is found, use its _id
             if (existingUser) {
@@ -67,8 +66,8 @@ class UserService {
                 userData._id = await utils.uuid('u-');
             }
 
-            const options = {new: true, upsert: true};
-            const filter = {mobNumber};
+            const options = { new: true, upsert: true };
+            const filter = { mobNumber };
             const update = {
                 $set: userData,
             };
@@ -103,6 +102,11 @@ class UserService {
             throw error;
         }
     }
+
+    async getUserByVerificationToken(token) {
+        return await User.findOne({ emailVerificationToken: token, emailVerificationExpires: { $gt: new Date() } });
+    }
+
 }
 
 module.exports = new UserService();

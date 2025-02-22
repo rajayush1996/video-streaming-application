@@ -4,8 +4,8 @@ const config = require('../../config/config');
 
 // Create a Redis client
 const redisClient = redis.createClient({
-    url: `redis://:${config.redis.password}@${config.redis.host}:${config.redis.port}`
-    // url: `redis://:@${config.redis.host}:${config.redis.port}`
+    // url: `redis://:${config.redis.password}@${config.redis.host}:${config.redis.port}`
+    url: `redis://:@${config.redis.host}:${config.redis.port}`
 
 });
 

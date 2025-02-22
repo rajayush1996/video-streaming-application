@@ -15,7 +15,7 @@ async function verifyOtpUser(req, res, next) {
 
 async function sendOtpUser(req, res, next) {
     try {
-        const { bodsy } = req;
+        const { body } = req;
         const result = await AuthService.sendOtpToEmail(body);
         if (result) {
             return res.status(httpStatus.OK).json({ message: 'otp send successfully!' });
@@ -28,7 +28,42 @@ async function sendOtpUser(req, res, next) {
     }
 }
 
+async function signUp(req, res, next) {
+    try {
+        const { body } = req;
+        const result = await AuthService.signUpUser(body);
+        return res.status(httpStatus.CREATED).json(result);
+    } catch(err) {
+        logger.error('Error in signUp', err);
+        next(err);
+    }
+}
+
+async function verifyEmail(req, res, next) {
+    try {
+        const { token } = req.query;
+        const result = await AuthService.verifyEmail(token);
+        return res.status(httpStatus.OK).json(result);
+    } catch(err) {
+        logger.error('Error in verifying email', err.message);
+        next(err);
+    }
+}
+
+async function resendVerificationEmail(req, res, next) {
+    try {
+        const response =  await AuthService.resendVerificationEmail(req.body); 
+        return res.status(httpStatus.OK).json(response);
+    } catch(err) {
+        logger.error('Error in resending verification email', err.message);
+        next(err);
+    }
+}
+
 module.exports = {
     verifyOtpUser,
     sendOtpUser,
+    signUp,
+    verifyEmail,
+    resendVerificationEmail
 };

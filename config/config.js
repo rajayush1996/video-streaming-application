@@ -29,10 +29,12 @@ const configEnv = config.get('config');
 const envVarsSchema = Joi.object({
     ENV: Joi.object({
         APP_HOST: Joi.string().required().description('The application host URL'),
-        STARZOPP_HOST: Joi.string().required().description('The Starzopp host URL'),
+        VSA_HOST: Joi.string().required().description('The vsa host URL'),
         WEBHOOK_HOST: Joi.string().required().description('The webhook host URL'),
         PORT: Joi.string().required().description('The application port'),
         ENVIRONMENT: Joi.string().required().description('The environment of the app'),
+        CLIENT_URL: Joi.string().required().description('The vsa host URL of client side'),
+        SERVER_URL: Joi.string().required().description('The vsa host URL of server side'),
     }).description('Environments setting'),
     DATABASE: Joi.object({
         TYPE: Joi.string().required().description('The type of database (e.g., mongodb)'),
@@ -60,6 +62,9 @@ const envVarsSchema = Joi.object({
         USERNAME: Joi.string().required().description('SMTP username'),
         PASSWORD: Joi.string().required().description('SMTP password'),
         EMAIL_FROM: Joi.string().required().description('Email sender address'),
+        GMAIL_PROVIDER: Joi.object().required(),
+        OUTLOOK_PROVIDER: Joi.object().required(),
+        AWS_PROVIDER: Joi.object().required(),
     }).description('SMTP settings'),
     AUTHENTICATION: Joi.object({
         PRIVATE_KEY_PATH: Joi.string().required().description('private key path'),
@@ -76,7 +81,7 @@ if (error) {
 const configuration = {
     env: {
         app_host: process.env.APP_HOST || envVars.APP_HOST,
-        starzopp_host: process.env.STARZOPP_HOST || envVars.ENV.STARZOPP_HOST,
+        vsa_host: process.env.VSA_HOST || envVars.ENV.VSA_HOST,
         webhook_host: process.env.WEBHOOK_HOST || envVars.WEBHOOK_HOST,
         port: process.env.PORT || envVars.PORT,
         environment: process.env.ENVIRONMENT || envVars.ENVIRONMENT,
@@ -115,7 +120,11 @@ const configuration = {
     authentication: {
         private_key_path: process.env.PRIVATE_KEY_PATH || envVars.AUTHENTICATION.PRIVATE_KEY_PATH,
         token_algortihm: process.env.TOKEN_ALGORITHM || envVars.AUTHENTICATION.TOKEN_ALGORITHM,
+        saltRounds: 10,
     },
+    emailVerification: {
+        verification_url: process.env.SERVER_URL || envVars.ENV.SERVER_URL
+    }
 };
 
 module.exports = configuration;

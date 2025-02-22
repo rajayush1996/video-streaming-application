@@ -1,8 +1,8 @@
 const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
-const {Schema} = mongoose;
+const { Schema } = mongoose;
 const utils = require('../utils/utils');
-const {toJSON, paginate} = require('./plugins');
+const { toJSON, paginate } = require('./plugins');
 
 const userSchema = new Schema(
     {
@@ -35,6 +35,11 @@ const userSchema = new Schema(
                 unique: true,
             },
         },
+        emailVerificationToken: {
+            type: String,
+            unique: true
+        },
+        emailVerificationExpires: { type: Date, required: false },
         email: {
             type: String,
             required: true,
@@ -42,6 +47,10 @@ const userSchema = new Schema(
             trim: true,
             lowercase: true,
             match: [/^\S+@\S+\.\S+$/, 'Please enter a valid email address.'], // Email format validation
+        },
+        isEmailVerified: {
+            type: Boolean,
+            default: false,
         },
         hashedOtp: {
             type: String,
@@ -53,7 +62,7 @@ const userSchema = new Schema(
         },
         dob: {
             type: Date,
-            required: true,
+            required: false,
             validate: {
                 validator(value) {
                     // Validate DOB to ensure the user is at least 18 years old
@@ -87,7 +96,7 @@ const userSchema = new Schema(
         },
         role: {
             type: String,
-            enum: ['PERSONAL', 'BUSINESS'],
+            enum: ['USER', 'ADMIN'],
         },
         mobNumber: {
             type: String,

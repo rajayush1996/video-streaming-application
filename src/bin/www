@@ -5,13 +5,11 @@
  */
 
 const app = require('../app');
-const debug = require('debug')('astro-bharat:server');
+const debug = require('debug')('vsa:server');
 const http = require('http');
 const connectDB = require('../connection/db');
 const logger = require('../features/logger');
 const redisClient = require('../connection/redis.connection');
-const { fetchConfig } = require('../services/internals/config.service');
-const configStore = require('../../config/configStore');
 
 /**
  * Get port from environment and store in Express.
@@ -98,17 +96,17 @@ async function onListening() {
         logger.info(`Server is listening on ${bind}`);
 
         // Handle non-critical error for Config Service
-        try {
-            const configData = await fetchConfig();
-            configStore.setConfig(configData);
-            logger.info('Config fetched successfully from the Config Service', configData);
-        } catch (fetchErr) {
-            // Log the error and proceed with default config or previous config
-            logger.error('Error fetching config from Config Service:', fetch.message || fetchErr);
-            // Set a default config or fallback config here if needed
-            configStore.setConfig({ /* your default config */ });
-            logger.warn('Using default configuration.');
-        }
+        // try {
+        // const configData = await fetchConfig();
+        // configStore.setConfig(configData);
+        // logger.info('Config fetched successfully from the Config Service', configData);
+        // } catch (fetchErr) {
+        //     // Log the error and proceed with default config or previous config
+        //     logger.error('Error fetching config from Config Service:', fetch.message || fetchErr);
+        //     // Set a default config or fallback config here if needed
+        //     configStore.setConfig({ /* your default config */ });
+        //     logger.warn('Using default configuration.');
+        // }
 
         // Critical: Attempt to connect to the database
         try {

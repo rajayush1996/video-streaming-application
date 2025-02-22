@@ -6,16 +6,14 @@ const metadata = require('./swaggerMetaData.json');
 
 const doc = {
     info: {
-        title: 'Starzopp API',
+        title: 'vsa API',
         description: 'Automatically generated API documentation',
     },
-    host: `${config.env.starzopp_host}:${config.env.port}`,
+    host: `${config.env.vsa_host}:${config.env.port}`,
     schemes: ['http'],
     paths: {}, // Ensure paths is initialized
 };
 
-console.log("🚀 ~ file: swagger.js:14 ~ config.env.starzopp_host:", config.env.starzopp_host);
-console.log("🚀 ~ file: swagger.js:14 ~ config.env.port:", config.env.port);
 
 function injectSwaggerMetadata(doc, metadata) {
     for (const path in metadata) {
