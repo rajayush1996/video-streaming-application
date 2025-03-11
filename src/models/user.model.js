@@ -101,6 +101,10 @@ const userSchema = new Schema(
         mobNumber: {
             type: String,
         },
+        subscriptionType: { 
+            type: String, enum: ['basic', 'premium'], 
+            default: 'basic' 
+        }
     },
     {
         timestamps: true,

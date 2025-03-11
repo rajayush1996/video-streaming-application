@@ -8,6 +8,7 @@ const AuthController = require('../controllers/auth.controller');
 // router.post('/unpin/:postId', PinnedPostController.unpinPost);
 // router.post('/pin/:postId', PinnedPostController.pinPost);
 router.post('/sign-up', AuthController.signUp);
+router.post('/sign-in', AuthController.signIn);
 router.get('/verify-email', AuthController.verifyEmail);
 router.post('/resend-verification', AuthController.resendVerificationEmail);
  

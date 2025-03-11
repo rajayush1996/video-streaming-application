@@ -29,6 +29,12 @@
         "PASSWORD": "kafka",
         "PORT": 5672
       },
+      "RABBITMQ": {
+        "HOST": "amqp://localhost",
+        "USER": "rabbitmq",
+        "PASSWORD": "rabbitmq",
+        "PORT": 5672
+      },
       "SMTP": {
         "HOST": "email-server",
         "PORT": 587,
@@ -66,6 +72,14 @@
       "AUTHENTICATION": {
         "PRIVATE_KEY_PATH": "../private_keys",
         "TOKEN_ALGORITHM": "HS256"
+      },
+      "CDN": {
+        "BUNNY": {
+          "STORAGE_ZONE": "",
+          "ACCESS_KEY": "",
+          "STORAGE_HOST": "",
+          "PULL_ZONE": ""
+        }
       }
     }
 }

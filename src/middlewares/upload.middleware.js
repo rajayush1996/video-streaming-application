@@ -1,9 +1,18 @@
-const multer = require('multer');
+const multer = require("multer");
+const path = require("path");
+const fs = require("fs");
 
-// const storage = multer.memoryStorage(); // Keeping files in memory; for production consider disk storage
-const upload = multer({
-    limits: { fileSize: 200 * 1024 * 1024 }, // 200MB limit
+const uploadDir = path.join(__dirname, "../uploads");
+if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir);
+
+const storage = multer.diskStorage({
+    destination: uploadDir,
+    filename: (req, file, cb) => {
+        const { chunkIndex } = req.body;
+        const originalName = file.originalname;
+        cb(null, `${originalName}.chunk_${chunkIndex}`);
+    },
 });
 
-
+const upload = multer({ storage });
 module.exports = upload;

@@ -56,6 +56,12 @@ const envVarsSchema = Joi.object({
         PASSWORD: Joi.string().required().description('Kafka password'),
         PORT: Joi.number().required().description('Kafka port'),
     }).description('Kafka settings'),
+    RABBITMQ: Joi.object({
+        HOST: Joi.string().required().description('Rabbitmq host'),
+        USER: Joi.string().required().description('Rabbitmq username'),
+        PASSWORD: Joi.string().required().description('Rabbitmq password'),
+        PORT: Joi.number().required().description('Rabbitmq port'),
+    }).description('Kafka settings'),
     SMTP: Joi.object({
         HOST: Joi.string().required().description('SMTP host'),
         PORT: Joi.number().required().description('SMTP port'),
@@ -70,6 +76,14 @@ const envVarsSchema = Joi.object({
         PRIVATE_KEY_PATH: Joi.string().required().description('private key path'),
         TOKEN_ALGORITHM: Joi.string().required().description('token algorithm'),
     }).description('authentication settings'),
+    CDN: Joi.object({
+        BUNNY: Joi.object({
+            STORAGE_ZONE: Joi.string().required().description('storage url of bunny cdn'),
+            ACCESS_KEY: Joi.string().required().description('access key of bunny cdn'),
+            STORAGE_HOST: Joi.string().required().description('bunny cdn url'),
+            PULL_ZONE: Joi.string().required().description("pull zone is for bunny cdn"),
+        })
+    })
 }).unknown(true);
 
 const { error, value: envVars } = envVarsSchema.validate(configEnv);
@@ -106,6 +120,12 @@ const configuration = {
         password: process.env.KAFKA_PASSWORD || envVars.KAFKA.PASSWORD,
         port: process.env.KAFKA_PORT || envVars.KAFKA.PORT,
     },
+    rabbitmq: {
+        host: process.env.RABBITMQ_HOST || envVars.RABBITMQ.HOST,
+        user: process.env.RABBITMQ_USER || envVars.RABBITMQ.USER,
+        password: process.env.RABBITMQ_PASSWORD || envVars.RABBITMQ.PASSWORD,
+        port: process.env.RABBITMQ_PORT || envVars.RABBITMQ.PORT,
+    },
     smtp: {
         host: process.env.SMTP_HOST || envVars.SMTP.HOST,
         port: process.env.SMTP_PORT || envVars.SMTP.PORT,
@@ -124,6 +144,12 @@ const configuration = {
     },
     emailVerification: {
         verification_url: process.env.SERVER_URL || envVars.ENV.SERVER_URL
+    },
+    cdn: {
+        bunny_storage_zone: process.env.BUNNY_STORAGE_ZONE || envVars.ENV.CDN.BUNNY.STORAGE_ZONE,
+        bunny_access_key: process.env.BUNNY_ACCESS_KEY || envVars.ENV.CDN.ACCESS_KEY,
+        bunny_storage_host: process.env.BUNNY_STORAGE_HOST || envVars.ENV.CDN.STORAGE_HOST,
+        bunny_pull_zone: process.env.BUNNY_PULL_ZONE || envVars.ENV.CDN.PULL_ZONE
     }
 };
 

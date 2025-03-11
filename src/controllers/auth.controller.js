@@ -39,6 +39,17 @@ async function signUp(req, res, next) {
     }
 }
 
+async function signIn(params) {
+    try {
+        const { body } = req;
+        const result = await AuthService.signInUser(body);
+        return res.status(httpStatus.OK).json(result);
+    } catch(err) {
+        logger.error('Error in signUp', err);
+        next(err);
+    }
+}
+
 async function verifyEmail(req, res, next) {
     try {
         const { token } = req.query;
@@ -64,6 +75,7 @@ module.exports = {
     verifyOtpUser,
     sendOtpUser,
     signUp,
+    signIn,
     verifyEmail,
     resendVerificationEmail
 };
