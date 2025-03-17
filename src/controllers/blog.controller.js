@@ -1,4 +1,4 @@
-const blogService = require("../services/blogService");
+const blogService = require("../services/blog.service");
 
 /**
  * Create Blog

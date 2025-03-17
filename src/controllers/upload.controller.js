@@ -1,57 +1,129 @@
-const uploadService = require('../services/upload.service')
+const fs = require("fs");
+const path = require("path");
+const sanitizeFilename = require("sanitize-filename");
+const UploadProgress = require("../models/uploadProgress.model");
+const { uploadToBunnyCDN } = require("../services/upload.service");
 
-exports.initUpload = async (req, res) => {
+exports.uploadVideo = async (req, res) => {
     try {
-        const { filename, totalSize } = req.body;
-        if (!filename || !totalSize) {
-            return res.status(400).json({ error: "Filename and total size are required." });
+        console.log("📥 Incoming upload request:", req.body);
+
+        if (!req.files || !req.files.chunk) {
+            return res.status(400).json({ error: "No file chunk provided" });
         }
-  
-        const CHUNK_SIZE = 10 * 1024 * 1024; // 10MB Chunk Size Decided in Backend
-        const totalChunks = Math.ceil(totalSize / CHUNK_SIZE);
-        const uploadSessionId = `${Date.now()}-${filename}`;
-  
-        res.json({
-            message: "Upload Initialized",
-            chunkSize: CHUNK_SIZE,
-            totalChunks,
-            uploadSessionId,
-            filename,
-        });
-    } catch (error) {
-        res.status(500).json({ error: "Error initializing upload." });
-    }
-};
-  
-exports.uploadChunk = async (req, res) => {
-    try {
-        if (!req.file) return res.status(400).json({ error: "No file uploaded." });
-  
-        const { uploadSessionId, totalChunks, chunkIndex, filename } = req.body;
-        if (!uploadSessionId || !totalChunks || !chunkIndex) {
-            return res.status(400).json({ error: "Invalid upload session." });
-        }
-  
-        const filePath = req.file.path;
-        const isFirstChunk = parseInt(chunkIndex) === 0;
-  
-        // Upload chunk to BunnyCDN
-        await uploadService.uploadChunk(filePath, filename, isFirstChunk);
-  
-        fs.unlinkSync(filePath); // Remove chunk after upload
-  
-        const isLastChunk = parseInt(chunkIndex) === parseInt(totalChunks) - 1;
-  
-        if (isLastChunk) {
-            return res.json({
-                message: "Upload completed!",
-                videoUrl: `${process.env.BUNNY_CDN_PULL_ZONE}/${filename}`,
+
+        let { fileName, chunkIndex, totalChunks } = req.body;
+        chunkIndex = parseInt(chunkIndex);
+        totalChunks = parseInt(totalChunks);
+        fileName = sanitizeFilename(fileName.replace(/\s+/g, "_")); // ✅ Sanitize filename
+
+        const chunk = req.files.chunk;
+        const uploadDir = path.join(__dirname, "../../uploads");
+        if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
+
+        const chunkPath = path.join(uploadDir, `${fileName}.part${chunkIndex}`);
+
+        // ✅ Find or create upload progress record
+        let progress = await UploadProgress.findOne({ fileName });
+
+        if (!progress) {
+            progress = new UploadProgress({
+                fileId: Date.now().toString(),
+                fileName,
+                totalChunks,
+                uploadedChunks: [],
+                status: "in-progress",
             });
+            await progress.save();
         }
-  
-        res.json({ message: `Chunk ${chunkIndex} uploaded.` });
+
+        if (progress.uploadedChunks.includes(chunkIndex)) {
+            console.log(`⚠️ Chunk ${chunkIndex} already uploaded. Skipping.`);
+            return res.json({ message: `Chunk ${chunkIndex + 1}/${totalChunks} already uploaded.` });
+        }
+
+        // ✅ Save chunk to disk
+        await chunk.mv(chunkPath);
+        console.log(`✅ Received chunk ${chunkIndex + 1}/${totalChunks} for ${fileName}`);
+
+        // ✅ Update MongoDB with uploaded chunk info
+        progress.uploadedChunks.push(chunkIndex);
+        await progress.save();
+
+        console.log("🚀 ~ exports.uploadVideo= ~ progress.uploadedChunks.length:", progress.uploadedChunks.length)
+        // ✅ If all chunks are uploaded, merge and upload to BunnyCDN
+        if (progress.uploadedChunks.length === totalChunks) {
+            console.log(`🔄 Merging chunks for ${fileName}...`);
+
+            const finalFilePath = path.join(uploadDir, fileName);
+            const writeStream = fs.createWriteStream(finalFilePath);
+
+            for (let i = 0; i < totalChunks; i++) {
+                const chunkFile = path.join(uploadDir, `${fileName}.part${i}`);
+                
+                if (!fs.existsSync(chunkFile)) {
+                    console.error(`❌ Missing chunk: ${chunkFile}`);
+                    return res.status(500).json({ error: "Missing chunk file" });
+                }
+
+                const data = fs.readFileSync(chunkFile);
+                writeStream.write(data);
+                fs.unlinkSync(chunkFile); // ✅ Remove chunk after merging
+            }
+
+            writeStream.end();
+
+            await new Promise((resolve) => writeStream.on("finish", resolve));
+            console.log(`✅ Merged file saved: ${finalFilePath}`);
+
+            // ✅ Upload the final merged file to BunnyCDN
+            try {
+                console.log("🚀 Uploading merged file to BunnyCDN...");
+                const bunnyUrl = await uploadToBunnyCDN(finalFilePath, fileName);
+                console.log("🚀 ~ exports.uploadVideo= ~ bunnyUrl:", bunnyUrl)
+                fs.unlinkSync(finalFilePath); // ✅ Remove after successful upload
+
+                // ✅ Mark upload as completed in MongoDB
+                progress.status = "completed";
+                await progress.save();
+
+                console.log("✅ Upload to BunnyCDN successful:", bunnyUrl);
+                return res.json({ message: "File uploaded successfully!", bunnyUrl });
+            } catch (error) {
+                console.error("❌ Failed to upload to BunnyCDN:", error);
+                return res.status(500).json({ error: "Failed to upload to BunnyCDN" });
+            }
+        }
+
+        res.json({ message: `Chunk ${chunkIndex + 1}/${totalChunks} uploaded.` });
+
     } catch (error) {
-        res.status(500).json({ error: error.message });
+        console.error("❌ Upload error:", error);
+        res.status(500).json({ error: "Internal server error" });
     }
 };
-  
+
+/**
+ * API to get the progress of an ongoing file upload.
+ * It returns the already uploaded chunk indexes.
+ */
+exports.getUploadProgress = async (req, res) => {
+    try {
+        const { fileName } = req.query;
+
+        if (!fileName) {
+            return res.status(400).json({ error: "fileName query parameter is required" });
+        }
+
+        const progress = await UploadProgress.findOne({ fileName });
+
+        if (!progress) {
+            return res.json({ uploadedChunks: [] }); // No progress means no chunks uploaded
+        }
+
+        res.json({ uploadedChunks: progress.uploadedChunks });
+    } catch (error) {
+        console.error("❌ Error fetching upload progress:", error);
+        res.status(500).json({ error: "Internal server error" });
+    }
+};

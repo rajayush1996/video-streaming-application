@@ -1,4 +1,4 @@
-const Blog = require("../models/blogModel");
+const Blog = require("../models/blog.model");
 
 /**
  * Create a new blog post

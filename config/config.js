@@ -149,7 +149,8 @@ const configuration = {
         bunny_storage_zone: process.env.BUNNY_STORAGE_ZONE || envVars.ENV.CDN.BUNNY.STORAGE_ZONE,
         bunny_access_key: process.env.BUNNY_ACCESS_KEY || envVars.ENV.CDN.ACCESS_KEY,
         bunny_storage_host: process.env.BUNNY_STORAGE_HOST || envVars.ENV.CDN.STORAGE_HOST,
-        bunny_pull_zone: process.env.BUNNY_PULL_ZONE || envVars.ENV.CDN.PULL_ZONE
+        bunny_pull_zone: process.env.BUNNY_PULL_ZONE || envVars.ENV.CDN.PULL_ZONE,
+        bunn_cdn_url: process.env.BUNNY_CDN_URL
     }
 };
 

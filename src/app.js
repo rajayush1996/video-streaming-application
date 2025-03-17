@@ -8,6 +8,8 @@ const helmet = require('helmet');
 const v1Routes = require('./routes');
 const swaggerUi = require('swagger-ui-express');
 const swaggerFile = require('./swagger_output.json');
+const cors = require('cors');
+const fileUpload = require("express-fileupload");
 
 
 // global features importing
@@ -20,10 +22,13 @@ const app = express();
 app.use(helmet()); // Set various HTTP headers for security
 
 app.use(logger('dev'));
+app.use(fileUpload());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 app.use(cookieParser());
+app.use(cors());
+
 app.use(express.static(path.join(__dirname, 'public')));
 app.get('/api/v1/health', (req, res) => {
     res.status(200).json({

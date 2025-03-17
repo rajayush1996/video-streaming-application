@@ -8,7 +8,7 @@ const router = express.Router();
 
 // router.use('/files', filesRouter);
 router.use('/auth', authRouter);
-router.use('/upload', uploadRouter)
+router.use('/videos', uploadRouter)
 router.use('/blogs', blogRouter)
 
 module.exports = router;

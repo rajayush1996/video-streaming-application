@@ -1,10 +1,8 @@
 const express = require("express");
 const router = express.Router();
-const upload = require("../middlewares/upload.middleware");
-const uploadController = require("../controllers/upload.controller");
+const { uploadVideo, getUploadProgress } = require("../controllers/upload.controller");
 
-router.post("/video-chunk", upload.single("video"), uploadController.uploadChunk);
-router.post("/upload-init", uploadController.initUpload);
-
+router.post("/upload", uploadVideo);
+router.get("/progress", getUploadProgress);
 
 module.exports = router;

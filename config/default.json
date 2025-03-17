@@ -75,10 +75,10 @@
       },
       "CDN": {
         "BUNNY": {
-          "STORAGE_ZONE": "",
-          "ACCESS_KEY": "",
-          "STORAGE_HOST": "",
-          "PULL_ZONE": ""
+          "STORAGE_ZONE": "dsds",
+          "ACCESS_KEY": "dfdss",
+          "STORAGE_HOST": "dsf",
+          "PULL_ZONE": "dfsfd"
         }
       }
     }

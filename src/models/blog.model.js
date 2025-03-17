@@ -6,7 +6,6 @@ const BlogSchema = new mongoose.Schema(
         content: { type: String, required: true },
         author: { type: String, required: true },
         status: { type: String, enum: ["draft", "published"], default: "draft" },
-        publishDate: { type: Date, default: null },
     },
     { timestamps: true }
 );
