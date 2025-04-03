@@ -1,8 +1,16 @@
 const nodemailer = require('nodemailer');
 const EmailProvider = require('../models/emailProvider.model');
+const { decrypt } = require('./security.util');
 
 const getEmailProvider = async (providerName = "Gmail") => {
-    return await EmailProvider.findOne({ providerName });
+    const provider = await EmailProvider.findOne({ providerName });
+
+    if (provider && provider?.auth && provider?.auth?.pass) {
+        // Decrypt password before returning
+        provider.auth.pass = decrypt(provider.auth.pass);
+    }
+
+    return provider;
 };
 
 const sendEmail = async (to, subject, message, providerName = "Gmail") => {

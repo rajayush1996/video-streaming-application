@@ -1,6 +1,6 @@
 const amqp = require("amqplib");
-const config = require("../../config/config");
-const queueDetails = require("../features/rabbitmq");
+const config = require("../../config");
+// const queueDetails = require("../features/rabbitmq");
 
 let channel = null;
 
@@ -10,9 +10,9 @@ async function connectRabbitMQ() {
         channel = await connection.createChannel();
     
         // Create and assert queues
-        for (const queueName of Object.values(rabbitmqConfig.queues)) {
-            await channel.assertQueue(queueName, { durable: true });
-        }
+        // for (const queueName of Object.values(rabbitmqConfig.queues)) {
+        //     await channel.assertQueue(queueName, { durable: true });
+        // }
 
         console.log("✅ RabbitMQ Connected & Queues Asserted!");
     } catch (error) {
@@ -27,8 +27,9 @@ function getChannel() {
     return channel;
 }
 
-function getQueue(name) {
-    return rabbitmqConfig.queues[name] || null;
+function getQueue() {
+    // return rabbitmqConfig.queues[name] || null;
+    return;
 }
 
 module.exports = { connectRabbitMQ, getChannel, getQueue };

@@ -8,17 +8,36 @@ exports.uploadVideo = async (req, res) => {
     try {
         console.log("📥 Incoming upload request:", req.body);
 
-        if (!req.files || !req.files.chunk) {
-            return res.status(400).json({ error: "No file chunk provided" });
+        
+
+        let { fileName, chunkIndex, totalChunks, isThumbnail } = req.body;
+        const uploadDir = path.join(__dirname, "../../uploads");
+
+        // ✅ Thumbnail Upload
+        if (isThumbnail === 'true') {
+            if (!req.files || !req.files.thumbnail) {
+                return res.status(400).json({ error: "No thumbnail file provided" });
+            }
+  
+            const thumbnail = req.files.thumbnail;
+            const thumbPath = path.join(uploadDir, `thumb_${fileName}`);
+  
+            await thumbnail.mv(thumbPath);
+            const thumbUrl = await uploadToBunnyCDN(thumbPath, `thumb_${fileName}`);
+            fs.unlinkSync(thumbPath);
+  
+            return res.json({ message: "Thumbnail uploaded successfully!", thumbUrl });
         }
 
-        let { fileName, chunkIndex, totalChunks } = req.body;
+        if (!req.files || !req.files.chunk) {
+            return res.status(400).json({ error: "No file chunk provided" });
+        }   
         chunkIndex = parseInt(chunkIndex);
         totalChunks = parseInt(totalChunks);
         fileName = sanitizeFilename(fileName.replace(/\s+/g, "_")); // ✅ Sanitize filename
 
+        
         const chunk = req.files.chunk;
-        const uploadDir = path.join(__dirname, "../../uploads");
         if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
 
         const chunkPath = path.join(uploadDir, `${fileName}.part${chunkIndex}`);

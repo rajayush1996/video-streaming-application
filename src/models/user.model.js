@@ -2,7 +2,10 @@ const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
 const { Schema } = mongoose;
 const utils = require('../utils/utils');
-const { toJSON, paginate } = require('./plugins');
+const { toJSON, paginate } = require('./plugins')
+const config = require('../../config');
+
+const auth = config.authentication;
 
 const userSchema = new Schema(
     {
@@ -104,6 +107,9 @@ const userSchema = new Schema(
         subscriptionType: { 
             type: String, enum: ['basic', 'premium'], 
             default: 'basic' 
+        },
+        profileUrl: {
+            type: String
         }
     },
     {
@@ -127,7 +133,7 @@ userSchema.pre('save', async function (next) {
 
     // Hash password if it has been modified or is new
     if (user.isModified('password')) {
-        const saltRounds = 10;
+        const saltRounds = auth.salt_rounds;
         user.password = await bcrypt.hash(user.password, saltRounds);
     }
 

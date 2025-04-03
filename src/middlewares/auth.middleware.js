@@ -1,8 +1,8 @@
-const { verifyToken } = require('../utils/jwt.util');
-const config = require('../../config/config');
-const fs = require('fs');
-const configStore = require('../../config/configStore');
-const logger = require('../features/logger');
+const { verifyToken } = require('../utils/security.util');
+const config = require('../../config');
+// const fs = require('fs');
+// const configStore = require('../../config/configStore');
+// const logger = require('../features/logger');
 
 // const privateKeyPath = config.authentication.private_key_path;
 
@@ -17,7 +17,7 @@ const authenticated = (req, res, next) => {
     const token = authHeader.split(' ')[1];
 
     try {
-        const tokenSecret = configStore.getConfigValue('publicKey') || '';
+        const tokenSecret = config.authentication.jwt_token_secret_key;
         const decoded = verifyToken(token, tokenSecret);
         req.user = decoded;
         next();

@@ -10,21 +10,24 @@ dotenv.config();
 
 const configEnv = config.get('config');
 
-// if (!configEnv.AUTHENTICATION.REFRESH_TOKEN_SECRET_KEY) {
-//     configEnv.AUTHENTICATION.REFRESH_TOKEN_SECRET_KEY = generateRefreshTokenSecretKey();
-// }
+if (!configEnv.AUTHENTICATION.REFRESH_TOKEN_SECRET_KEY) {
+    configEnv.AUTHENTICATION.REFRESH_TOKEN_SECRET_KEY = generateRefreshTokenSecretKey();
+}
 
-// if (!configEnv.AUTHENTICATION.REFRESH_TOKEN_ISSUER) {
-//     configEnv.AUTHENTICATION.REFRESH_TOKEN_ISSUER = generateRefreshTokenSecretKey();
-// }
+if (!configEnv.AUTHENTICATION.REFRESH_TOKEN_ISSUER) {
+    configEnv.AUTHENTICATION.REFRESH_TOKEN_ISSUER = generateRefreshTokenSecretKey();
+}
 
-// if (!configEnv.AUTHENTICATION.JWT_TOKEN_ISSUER) {
-//     configEnv.AUTHENTICATION.JWT_TOKEN_ISSUER = generateRandomString(12);
-// }
+if (!configEnv.AUTHENTICATION.JWT_TOKEN_ISSUER) {
+    configEnv.AUTHENTICATION.JWT_TOKEN_ISSUER = generateRandomString(12);
+}
 
-// if (!configEnv.AUTHENTICATION.JWT_TOKEN_SECRET_KEY) {
-//     configEnv.AUTHENTICATION.JWT_TOKEN_SECRET_KEY = generateRefreshTokenSecretKey();
-// }
+if (!configEnv.AUTHENTICATION.JWT_TOKEN_SECRET_KEY) {
+    configEnv.AUTHENTICATION.JWT_TOKEN_SECRET_KEY = generateRefreshTokenSecretKey();
+}
+if (!configEnv.AUTHENTICATION.ENCRYPTION_SECRET) {
+    configEnv.AUTHENTICATION.ENCRYPTION_SECRET = generateRefreshTokenSecretKey();
+}
 
 const envVarsSchema = Joi.object({
     ENV: Joi.object({
@@ -75,6 +78,13 @@ const envVarsSchema = Joi.object({
     AUTHENTICATION: Joi.object({
         PRIVATE_KEY_PATH: Joi.string().required().description('private key path'),
         TOKEN_ALGORITHM: Joi.string().required().description('token algorithm'),
+        REFRESH_TOKEN_SECRET_KEY: Joi.string().required().description('refresh token secret key'),
+        REFRESH_TOKEN_ISSUER: Joi.string().required().description('refresh token issuer'),
+        JWT_TOKEN_ISSUER: Joi.string().required().description('jwt token issuer'),
+        JWT_TOKEN_SECRET_KEY: Joi.string().required().description('jwt token secret key'),
+        ENCRYPTION_SECRET: Joi.string().required().description('encryption secret key'),
+        ENCRYPTION_ALGORITHM: Joi.string().required().description('encryption algorithm'),
+
     }).description('authentication settings'),
     CDN: Joi.object({
         BUNNY: Joi.object({
@@ -99,6 +109,7 @@ const configuration = {
         webhook_host: process.env.WEBHOOK_HOST || envVars.WEBHOOK_HOST,
         port: process.env.PORT || envVars.PORT,
         environment: process.env.ENVIRONMENT || envVars.ENVIRONMENT,
+        client_url: process.env.CLIENT_URL || envVars.ENV.CLIENT_URL
     },
     database: {
         type: process.env.DATABASE_TYPE || envVars.DATABASE.TYPE,
@@ -140,7 +151,15 @@ const configuration = {
     authentication: {
         private_key_path: process.env.PRIVATE_KEY_PATH || envVars.AUTHENTICATION.PRIVATE_KEY_PATH,
         token_algortihm: process.env.TOKEN_ALGORITHM || envVars.AUTHENTICATION.TOKEN_ALGORITHM,
-        saltRounds: 10,
+        salt_rounds: 10,
+        jwt_token_expiration: '86000s',
+        refresh_token_secret_key: process.env.REFRESH_TOKEN_SECRET_KEY || envVars.AUTHENTICATION.REFRESH_TOKEN_SECRET_KEY,
+        refresh_token_issuer: process.env.REFRESH_TOKEN_ISSUER || envVars.AUTHENTICATION.REFRESH_TOKEN_ISSUER,
+        refresh_token_expiration: "30d",
+        jwt_token_issuer: process.env.JWT_TOKEN_ISSUER || envVars.AUTHENTICATION.JWT_TOKEN_ISSUER,
+        jwt_token_secret_key: process.env.JWT_TOKEN_SECRET_KEY || envVars.AUTHENTICATION.JWT_TOKEN_SECRET_KEY,
+        encryption_aglorithm: process.env.ENCRYPTION_ALGORITHM || envVars.AUTHENTICATION.ENCRYPTION_ALGORITHM,
+        encryption_secret: process.env.ENCRYPTION_SECRET || envVars.AUTHENTICATION.ENCRYPTION_SECRET,
     },
     emailVerification: {
         verification_url: process.env.SERVER_URL || envVars.ENV.SERVER_URL

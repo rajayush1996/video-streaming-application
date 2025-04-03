@@ -1,5 +1,5 @@
 // /* eslint-disable camelcase */
-// const config = require('../../config/config');
+// const config = require('../../config');
 // const logger = require('../features/logger');
 // const otpGenerator = require('otp-generator');
 // const Twilio = require('twilio');

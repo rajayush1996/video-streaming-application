@@ -1,38 +1,10 @@
 const Blog = require("../models/blog.model");
 
-/**
- * Create a new blog post
- */
-exports.createBlog = async (data) => {
-    const blog = new Blog(data);
-    return await blog.save();
-};
+const createBlog = async (data) => await new Blog(data).save();
+const getAllBlogs = async () => await Blog.find().populate("author", "firstName lastName email");
+const getBlogById = async (id) => await Blog.findById(id).populate("author", "firstName lastName email");
+const updateBlog = async (id, data) => await Blog.findByIdAndUpdate(id, data, { new: true, runValidators: true });
+const deleteBlog = async (id) => await Blog.findByIdAndDelete(id);
+const publishBlog = async (id) => await Blog.findByIdAndUpdate(id, { status: "published", publishDate: new Date() }, { new: true });
 
-/**
- * Get all blogs with pagination & filtering
- */
-exports.getAllBlogs = async (filters, page, limit) => {
-    const query = filters ? { ...filters } : {};
-    return await Blog.find(query).skip((page - 1) * limit).limit(limit);
-};
-
-/**
- * Get a blog by ID
- */
-exports.getBlogById = async (id) => {
-    return await Blog.findById(id);
-};
-
-/**
- * Update a blog post
- */
-exports.updateBlog = async (id, data) => {
-    return await Blog.findByIdAndUpdate(id, data, { new: true });
-};
-
-/**
- * Delete a blog post
- */
-exports.deleteBlog = async (id) => {
-    return await Blog.findByIdAndDelete(id);
-};
+module.exports = { createBlog, getAllBlogs, getBlogById, updateBlog, deleteBlog, publishBlog };

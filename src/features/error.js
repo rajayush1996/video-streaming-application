@@ -3,7 +3,7 @@ const httpStatus = require('http-status');
 const logger = require('./logger');
 
 const mongoose = require('mongoose');
-const config = require('../../config/config');
+const config = require('../../config');
 const { v4: uuidv4 } = require('uuid');
 
 class ApiError extends Error {

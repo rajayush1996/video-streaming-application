@@ -71,7 +71,13 @@
       },
       "AUTHENTICATION": {
         "PRIVATE_KEY_PATH": "../private_keys",
-        "TOKEN_ALGORITHM": "HS256"
+        "TOKEN_ALGORITHM": "HS256",
+        "REFRESH_TOKEN_SECRET_KEY": "iepNwcdKOLMdJcFxnl3ugdT5GUAqr9GazWJQk9hKKic=",
+        "REFRESH_TOKEN_ISSUER": "/SzUaN2pzQb72ySVjY8XRcjlXyrsBwEfEu7m4MMRRU8=",
+        "JWT_TOKEN_ISSUER": "2293b593afb5",
+        "JWT_TOKEN_SECRET_KEY": "rL51YnckRld1nNvXvL1YcAKDROtMnshg4UTy1U+jSe4=",
+        "ENCRYPTION_SECRET": "u2VKrxsdVomTFF2ept6vdj/rJD4EE8ZVKaLehBG/rZM=",
+        "ENCRYPTION_ALGORITHM":"aes-256-cbc"
       },
       "CDN": {
         "BUNNY": {

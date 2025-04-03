@@ -1,5 +1,5 @@
 const { ApiHelper } = require('../../utils'); // Import the ApiHelper class
-const config = require('../../../config/config');
+const config = require('../../../config');
 const logger = require('../../features/logger');
 // Create an instance of ApiHelper for the Config Service
 const configApiHelper = new ApiHelper(config.internal_apis.config_domain, {

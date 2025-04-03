@@ -1,12 +1,11 @@
 const mongoose = require("mongoose");
 const logger = require("../features/logger");
-const config = require("../../config/config");
+const config = require("../../config");
 const seedEmailProviders = require("../seeds/emailProvider.seed");
 
 const fs = require("fs");
 const path = require("path");
 
-let channel = null;
 let queues = {};
 
 // Function to Load All Queue Configurations from `config/rabbitmq/`

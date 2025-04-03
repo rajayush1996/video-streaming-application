@@ -1,4 +1,5 @@
 const EmailProvider = require('../models/emailProvider.model');
+const { encrypt } = require('../utils/security.util');
 
 const seedEmailProviders = async () => {
     try {
@@ -15,7 +16,7 @@ const seedEmailProviders = async () => {
                     secure: false,
                     auth: {
                         user: process.env.GMAIL_USER || "ayushraj8571@gmail.com",
-                        pass: process.env.GMAIL_PASS || "gzondofebwlgdtwl"
+                        pass:  process.env.GMAIL_PASS ? encrypt(process.env.GMAIL_PASS) : encrypt("gzondofebwlgdtwl")
                     },
                     fromEmail: process.env.GMAIL_USER || "ayushraj8571@gmail.com"
                 },
@@ -26,7 +27,7 @@ const seedEmailProviders = async () => {
                     secure: false,
                     auth: {
                         user: process.env.OUTLOOK_USER || "your-email@outlook.com",
-                        pass: process.env.OUTLOOK_PASS || "your-email-password"
+                        pass: process.env.OUTLOOK_PASS ? encrypt(process.env.OUTLOOK_PASS) : encrypt("your-email-password")
                     },
                     fromEmail: process.env.OUTLOOK_USER || "your-email@outlook.com"
                 },
@@ -37,7 +38,7 @@ const seedEmailProviders = async () => {
                     secure: true,
                     auth: {
                         user: process.env.AWS_SES_USER || "your-aws-ses-user",
-                        pass: process.env.AWS_SES_PASS || "your-aws-ses-password"
+                        pass: process.env.AWS_SES_PASS ? encrypt(process.env.AWS_SES_PASS) : encrypt("your-aws-ses-password")
                     },
                     fromEmail: process.env.AWS_SES_EMAIL || "your-ses-email@example.com"
                 }

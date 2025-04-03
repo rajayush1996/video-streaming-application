@@ -1,6 +1,6 @@
 // src/config/redis.config.js
 const redis = require('redis');
-const config = require('../../config/config');
+const config = require('../../config');
 
 // Create a Redis client
 const redisClient = redis.createClient({

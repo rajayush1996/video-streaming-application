@@ -1,6 +1,7 @@
 const AuthService = require('../services/auth.service');
 const httpStatus = require('http-status');
 const logger = require('../features/logger');
+const { setRefreshTokenCookie, getRefreshTokenFromCookie } = require('../utils/cookies.util');
 
 async function verifyOtpUser(req, res, next) {
     try {
@@ -39,10 +40,13 @@ async function signUp(req, res, next) {
     }
 }
 
-async function signIn(params) {
+async function signIn(req, res, next) {
     try {
         const { body } = req;
         const result = await AuthService.signInUser(body);
+        const refreshToken = result.tokens.refreshToken;
+        setRefreshTokenCookie(res, refreshToken);
+        delete result.tokens.refreshToken;
         return res.status(httpStatus.OK).json(result);
     } catch(err) {
         logger.error('Error in signUp', err);
@@ -71,11 +75,23 @@ async function resendVerificationEmail(req, res, next) {
     }
 }
 
+async function verifyRefreshToken(req, res, next){
+    try {
+        const refreshToken = getRefreshTokenFromCookie(req);
+        const accessToken =  AuthService.generateAccessToken(refreshToken);
+        return res.status(httpStatus.OK).json({ accessToken });
+    } catch (err) {
+        console.error('Failed to generate access token:', err);
+        next(err);
+    }
+}
+
 module.exports = {
     verifyOtpUser,
     sendOtpUser,
     signUp,
     signIn,
     verifyEmail,
-    resendVerificationEmail
+    resendVerificationEmail,
+    verifyRefreshToken
 };

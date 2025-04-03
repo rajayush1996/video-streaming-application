@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { validate } = require('../middlewares/validation.middleware');
+// const { validate } = require('../middlewares/validation.middleware');
 const AuthController = require('../controllers/auth.controller');
 
 // router.get('/pin/:postId', PinnedPostController.getPinnedPostsByPostId);
@@ -10,6 +10,7 @@ const AuthController = require('../controllers/auth.controller');
 router.post('/sign-up', AuthController.signUp);
 router.post('/sign-in', AuthController.signIn);
 router.get('/verify-email', AuthController.verifyEmail);
+router.get('/refresh-token', AuthController.verifyRefreshToken);
 router.post('/resend-verification', AuthController.resendVerificationEmail);
  
 module.exports = router;

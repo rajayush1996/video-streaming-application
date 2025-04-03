@@ -1,7 +1,7 @@
 /* eslint-disable no-useless-catch */
 // Import the User model
 const User = require('../models/user.model');
-const AuthService = require('../services/auth.service');
+// const AuthService = require('../services/auth.service');
 const utils = require('../utils/utils');
 class UserService {
     // Create a new user
@@ -17,7 +17,7 @@ class UserService {
     // Retrieve a user by ID
     async getUserById(userId) {
         try {
-            return await User.findById(userId);
+            return await User.findById(userId,  "firstName lastName email role phoneNumber subscriptionType createdAt profileUrl isActive");
         } catch (error) {
             throw error;
         }
@@ -46,8 +46,8 @@ class UserService {
     // Update user information
     async updateUser(userId, userData) {
         try {
-            const options = { new: true, upsert: true };
-            return await User.updateOne({ _id: userId }, userData, options);
+            const options = { new: true, upsert: true, select: "firstName lastName email role phoneNumber subscriptionType createdAt profileUrl isActive" };
+            return await User.findByIdAndUpdate(userId, userData, options);
         } catch (error) {
             throw error;
         }

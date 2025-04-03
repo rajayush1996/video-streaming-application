@@ -5,7 +5,7 @@ const { sendEmail } = require('../utils/transporter.util');
 const { ApiError } = require('../features/error');
 const httpStatus = require('http-status');
 const logger = require('../features/logger');
-const { authentication, emailVerification } = require('../../config/config');
+const { authentication, emailVerification } = require('../../config');
 const { v4: uuidv4 } = require('uuid');
 
 class AuthService {
@@ -21,7 +21,7 @@ class AuthService {
             }
 
             // Hash password
-            const hashedPassword = await bcrypt.hash(password, authentication.saltRounds);
+            // const hashedPassword = await bcrypt.hash(password, authentication.salt_rounds);
 
 
             // Generate email verification token
@@ -29,9 +29,9 @@ class AuthService {
             const emailVerificationExpires = new Date(Date.now() + 2 * 60 * 1000); // 2 minute
 
             // Create user with `isEmailVerified = false`
-            const newUser = await UserService.createUser({
+            await UserService.createUser({
                 email,
-                password: hashedPassword,
+                password: password,
                 role,
                 isEmailVerified: false,
                 emailVerificationToken,
@@ -148,16 +148,16 @@ class AuthService {
     generateAuthTokens(user) {
         const payload = { id: user._id, email: user.email, role: user.role };
 
-        const accessToken = jwt.sign(payload, authentication.jwt_secret_key, {
+        const accessToken = jwt.sign(payload, authentication.jwt_token_secret_key, {
             expiresIn: authentication.jwt_token_expiration,
-            algorithm: authentication.token_algorithm,
+            algorithm: authentication.token_algortihm,
             issuer: authentication.jwt_token_issuer,
         });
 
-        const refreshToken = jwt.sign(payload, authentication.jwt_refresh_secret_key, {
+        const refreshToken = jwt.sign(payload, authentication.refresh_token_secret_key, {
             expiresIn: authentication.refresh_token_expiration,
-            algorithm: authentication.token_algorithm,
-            issuer: authentication.jwt_refresh_issuer,
+            algorithm: authentication.token_algortihm,
+            issuer: authentication.refresh_token_issuer,
         });
 
         return {
@@ -165,6 +165,36 @@ class AuthService {
             refreshToken,
         };
     }
+
+    generateAccessToken = (refreshToken) => {
+        try {
+            // Verify the refresh token
+            const payload = jwt.verify(refreshToken, authentication.refresh_token_secret_key);
+            const accessTokenPayload = {
+                id: payload.id,
+                email: payload.email,
+                role: payload.role
+            }
+            console.log("🚀 ~ AuthService ~ accessTokenPayload:", accessTokenPayload)
+            // Optional: Check token existence in DB (blacklist or session-based security)
+      
+            // Re-issue a new access token
+            const accessToken = jwt.sign(
+                accessTokenPayload, // You can include any data you want
+                authentication.jwt_token_secret_key,
+                {
+                    expiresIn: authentication.jwt_token_expiration,
+                    algorithm: authentication.token_algortihm,
+                    issuer: authentication.jwt_token_issuer,
+                }
+            );
+      
+            return accessToken;
+        } catch (err) {
+            console.error('Failed to generate access token:', err);
+            throw new Error('Invalid refresh token');
+        }
+    };
 }
 
 module.exports = new AuthService();

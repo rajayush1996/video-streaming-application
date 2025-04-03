@@ -1,7 +1,7 @@
 const httpStatus = require('http-status');
 // Const {ApiError} = require('../features/error');
 const UserService = require('./../services/user.service');
-
+const { responseHandler } =require('../features/error');
 const logger = require('../features/logger');
 
 const createUser = async (req, res, next) => {
@@ -17,10 +17,11 @@ const createUser = async (req, res, next) => {
 
 const getUserById = async (req, res, next) => {
     try {
-        const userId = req.params.id;
+        const userId = req.user.id;
         const user = await UserService.getUserById(userId);
+        
         if (user) {
-            res.status(httpStatus.OK).json(user);
+            responseHandler(res, httpStatus.OK, '', user)
         } else {
             res.status(httpStatus.NOT_FOUND).json({ message: 'User details not found' });
         }
@@ -30,12 +31,12 @@ const getUserById = async (req, res, next) => {
 };
 
 const updateUser = async (req, res, next) => {
-    const userId = req.params.id;
+    const userId = req.user.id;
     const userData = req.body; // Assuming updated user data is sent in the request body
     try {
         const updatedUser = await UserService.updateUser(userId, userData);
         if (updatedUser) {
-            res.json(updatedUser);
+            responseHandler(res, httpStatus.OK, '', updatedUser)
         } else {
             res.status(httpStatus.NOT_FOUND).json({ message: 'User not found' });
         }
