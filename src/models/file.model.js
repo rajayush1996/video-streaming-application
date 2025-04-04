@@ -11,6 +11,7 @@ const FileSchema = new Schema({
     size: { type: Number, required: true },
     tags: { type: [String], default: [] },
     visibility: { type: String, enum: ["public", "private"], default: "public" },
+    url: { type: String }
 }, { timestamps: true });
 
 FileSchema.plugin(toJSON);

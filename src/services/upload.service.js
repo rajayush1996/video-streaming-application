@@ -1,6 +1,9 @@
 const axios = require("axios");
 const fs = require("fs");
 const config = require('../../config');
+const path = require("path");
+const fileSchema = require("../models/file.model");
+
 // const BUNNY_STORAGE_URL = `${process.env.BUNNY_STORAGE_HOST}/${process.env.BUNNY_STORAGE_ZONE}`;
 const BUNNY_STORAGE_URL = `${config.cdn.bunny_storage_host}/${config.cdn.bunny_storage_zone}`;
 
@@ -43,7 +46,7 @@ exports.uploadChunk = async (filePath, filename, isFirstChunk) => {
 };
 
 
-exports.uploadToBunnyCDN =async (filePath, fileName) =>{
+exports.uploadToBunnyCDN =async (filePath, fileName, options={}) =>{
     try {
         // ✅ Ensure the merged file actually exists before attempting upload
         if (!fs.existsSync(filePath)) {
@@ -62,7 +65,21 @@ exports.uploadToBunnyCDN =async (filePath, fileName) =>{
             maxBodyLength: Infinity,
         });
 
-        return `${PULL_ZONE}/videos/${fileName}`;
+        const stats = fs.statSync(filePath);
+        const url = `${PULL_ZONE}/videos/${fileName}`;
+
+        const saved = await fileSchema.create({
+            fileId: path.parse(fileName).name,
+            blobName: fileName,
+            containerName: "videos",
+            originalName: options.originalName || fileName,
+            mimeType: options.mimeType || "application/octet-stream",
+            size: stats.size,
+            tags: options.tags || [],
+            visibility: options.visibility || "public",
+            url,
+        });
+        return { url, file: saved };;
     } catch (error) {
         throw new Error(`BunnyCDN Upload Failed: ${error.message}`);
     }

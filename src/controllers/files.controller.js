@@ -20,7 +20,7 @@ class FilesController {
                 res.write(chunk);
             });
 
-            downloadStream.on('error', (error) => {
+            downloadStream.on('error', () => {
                 res.status(404).send('File not found');
             });
 

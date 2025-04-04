@@ -5,3 +5,4 @@ const router = express.Router();
 router.get('/:fileId', FilesController.getFileById);
 
 module.exports = router;
+

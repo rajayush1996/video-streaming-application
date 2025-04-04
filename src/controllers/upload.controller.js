@@ -25,7 +25,7 @@ exports.uploadVideo = async (req, res) => {
             await thumbnail.mv(thumbPath);
             const thumbUrl = await uploadToBunnyCDN(thumbPath, `thumb_${fileName}`);
             fs.unlinkSync(thumbPath);
-  
+            
             return res.json({ message: "Thumbnail uploaded successfully!", thumbUrl });
         }
 
