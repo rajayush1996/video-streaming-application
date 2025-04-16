@@ -56,7 +56,7 @@ async function signIn(req, res, next) {
 
 async function verifyEmail(req, res, next) {
     try {
-        const { token } = req.query;
+        const { token } = req.body;
         const result = await AuthService.verifyEmail(token);
         return res.status(httpStatus.OK).json(result);
     } catch(err) {

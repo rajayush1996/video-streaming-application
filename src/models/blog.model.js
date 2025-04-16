@@ -10,9 +10,18 @@ const blogSchema = new mongoose.Schema(
         author: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
         status: { type: String, enum: ["draft", "published"], default: "draft" },
         publishDate: { type: Date },
+        deletedAt: { type: Date, default: null },
     },
     { timestamps: true, versionKey: false, } // Automatically adds createdAt & updatedAt
 );
+
+// Add query middleware to exclude soft-deleted blogs by default
+blogSchema.pre(/^find/, function(next) {
+    if (!this.getQuery().includeDeleted) {
+        this.where({ deletedAt: null });
+    }
+    next();
+});
 
 blogSchema.plugin(toJSON);
 blogSchema.plugin(paginate);

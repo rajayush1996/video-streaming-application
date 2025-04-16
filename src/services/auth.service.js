@@ -7,6 +7,7 @@ const httpStatus = require('http-status');
 const logger = require('../features/logger');
 const { authentication, emailVerification } = require('../../config');
 const { v4: uuidv4 } = require('uuid');
+const rateLimit = require('express-rate-limit');
 
 class AuthService {
     // User Signup (With Email Verification)
@@ -20,18 +21,17 @@ class AuthService {
                 throw new ApiError(httpStatus.CONFLICT, 'Email already exists.');
             }
 
-            // Hash password
-            // const hashedPassword = await bcrypt.hash(password, authentication.salt_rounds);
-
+            // Add password hashing
+            const hashedPassword = await bcrypt.hash(password, authentication.salt_rounds);
 
             // Generate email verification token
             const emailVerificationToken = uuidv4();
             const emailVerificationExpires = new Date(Date.now() + 2 * 60 * 1000); // 2 minute
 
-            // Create user with `isEmailVerified = false`
+            // Create user with hashed password
             await UserService.createUser({
                 email,
-                password: password,
+                password: hashedPassword,
                 role,
                 isEmailVerified: false,
                 emailVerificationToken,
@@ -39,7 +39,7 @@ class AuthService {
             });
 
             // Send email verification link
-            const verificationUrl = `${emailVerification.verification_url}/api/v1/auth/verify-email?token=${emailVerificationToken}`;
+            const verificationUrl = `${emailVerification.verification_url}/verify-email?token=${emailVerificationToken}`;
             await sendEmail(email, "Verify Your Email", `Click the link to verify: ${verificationUrl}`);
 
             return {
@@ -195,6 +195,29 @@ class AuthService {
             throw new Error('Invalid refresh token');
         }
     };
+
+    // Add rate limiting
+    getAuthLimiter() {
+        return rateLimit({
+            windowMs: 15 * 60 * 1000, // 15 minutes
+            max: 5 // limit each IP to 5 requests per windowMs
+        });
+    }
+
+    // Add password strength validation
+    validatePassword(password) {
+        const minLength = 8;
+        const hasUpperCase = /[A-Z]/.test(password);
+        const hasLowerCase = /[a-z]/.test(password);
+        const hasNumbers = /\d/.test(password);
+        const hasSpecialChar = /[!@#$%^&*]/.test(password);
+        
+        return password.length >= minLength && 
+               hasUpperCase && 
+               hasLowerCase && 
+               hasNumbers && 
+               hasSpecialChar;
+    }
 }
 
 module.exports = new AuthService();

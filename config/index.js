@@ -92,6 +92,9 @@ const envVarsSchema = Joi.object({
             ACCESS_KEY: Joi.string().required().description('access key of bunny cdn'),
             STORAGE_HOST: Joi.string().required().description('bunny cdn url'),
             PULL_ZONE: Joi.string().required().description("pull zone is for bunny cdn"),
+            VID_CONTAINER_NAME: Joi.string().required().description("container name for bunny cdn"),
+            THUMBNAIL_CONTAINER_NAME: Joi.string().required().description("container name for bunny cdn"),
+            LOCAL_STORAGE_PATH: Joi.string().required().description("local storage path for bunny cdn"),
         })
     })
 }).unknown(true);
@@ -162,14 +165,17 @@ const configuration = {
         encryption_secret: process.env.ENCRYPTION_SECRET || envVars.AUTHENTICATION.ENCRYPTION_SECRET,
     },
     emailVerification: {
-        verification_url: process.env.SERVER_URL || envVars.ENV.SERVER_URL
+        verification_url: process.env.CLIENT_URL || envVars.ENV.CLIENT_URL
     },
     cdn: {
         bunny_storage_zone: process.env.BUNNY_STORAGE_ZONE || envVars.ENV.CDN.BUNNY.STORAGE_ZONE,
         bunny_access_key: process.env.BUNNY_ACCESS_KEY || envVars.ENV.CDN.ACCESS_KEY,
         bunny_storage_host: process.env.BUNNY_STORAGE_HOST || envVars.ENV.CDN.STORAGE_HOST,
         bunny_pull_zone: process.env.BUNNY_PULL_ZONE || envVars.ENV.CDN.PULL_ZONE,
-        bunn_cdn_url: process.env.BUNNY_CDN_URL
+        bunn_cdn_url: process.env.BUNNY_CDN_URL,
+        bunny_cdn_vid_container_name: process.env.BUNNY_CDN_VID_CONTAINER_NAME || envVars.ENV.CDN.VID_CONTAINER_NAME,
+        bunny_cdn_thumbnail_container_name: process.env.BUNNY_CDN_THUMBNAIL_CONTAINER_NAME || envVars.ENV.CDN.THUMBNAIL_CONTAINER_NAME,
+        local_upload_path: process.env.LOCAL_STORAGE_PATH || envVars.ENV.CDN.LOCAL_STORAGE_PATH,
     }
 };
 

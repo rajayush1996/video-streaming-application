@@ -9,8 +9,9 @@ const AuthController = require('../controllers/auth.controller');
 // router.post('/pin/:postId', PinnedPostController.pinPost);
 router.post('/sign-up', AuthController.signUp);
 router.post('/sign-in', AuthController.signIn);
-router.get('/verify-email', AuthController.verifyEmail);
+router.post('/verify-email', AuthController.verifyEmail);
 router.get('/refresh-token', AuthController.verifyRefreshToken);
 router.post('/resend-verification', AuthController.resendVerificationEmail);
+
  
 module.exports = router;

@@ -12,5 +12,6 @@ router.get("/:id", authenticated, blogController.getBlogById);
 router.put("/:id", authenticated, blogController.updateBlog);
 // validate(blogSchema),
 router.delete("/:id", authenticated, blogController.deleteBlog);
+router.put("/:id/restore", authenticated, blogController.restoreBlog);
 
 module.exports = router;

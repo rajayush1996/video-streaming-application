@@ -84,7 +84,10 @@
           "STORAGE_ZONE": "dsds",
           "ACCESS_KEY": "dfdss",
           "STORAGE_HOST": "dsf",
-          "PULL_ZONE": "dfsfd"
+          "PULL_ZONE": "dfsfd",
+          "VID_CONTAINER_NAME": "videos",
+          "THUMBNAIL_CONTAINER_NAME": "thumbnails",
+          "LOCAL_STORAGE_PATH": "../../uploads"
         }
       }
     }
