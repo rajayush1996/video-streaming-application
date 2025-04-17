@@ -1,5 +1,6 @@
 const MediaMeta = require("../models/mediaMeta.model");
 const File = require("../models/file.model");
+const { formatApiResult } = require("../utils/formatApiResult.util");
 
 class MediaMetaService {
     async createMediaMetaInfo(metaInfo) {
@@ -29,11 +30,12 @@ class MediaMetaService {
             };
             
             // Merge with provided options
-            const queryOptions = { ...defaultOptions, ...options };
+            const queryOptions = { ...defaultOptions, ...options, lean: true };
             
             // Use the paginate plugin
             const result = await MediaMeta.paginate(filter, queryOptions);
-            
+            // result.results = (result.results || []).map((doc) => doc.toJSON); // Ensure results is an array
+            result.results = formatApiResult(result.results || []);
             // Enhance results with file URLs
             if (result.results && result.results.length > 0) {
                 const enhancedResults = await this.enhanceWithFileUrls(result.results);

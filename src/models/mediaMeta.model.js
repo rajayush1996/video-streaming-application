@@ -14,7 +14,7 @@ mediaMetadataSchema.plugin(toJSON);
 mediaMetadataSchema.plugin(paginate);
 
 // Pre-save hook to hash password before saving user
-mediaMetadataSchema.pre('save', async function (next) {
+mediaMetadataSchema.pre('validate', async function (next) {
     const media = this;
 
     // Generate UUID if _id is not present

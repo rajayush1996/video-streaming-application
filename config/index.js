@@ -168,14 +168,14 @@ const configuration = {
         verification_url: process.env.CLIENT_URL || envVars.ENV.CLIENT_URL
     },
     cdn: {
-        bunny_storage_zone: process.env.BUNNY_STORAGE_ZONE || envVars.ENV.CDN.BUNNY.STORAGE_ZONE,
-        bunny_access_key: process.env.BUNNY_ACCESS_KEY || envVars.ENV.CDN.ACCESS_KEY,
-        bunny_storage_host: process.env.BUNNY_STORAGE_HOST || envVars.ENV.CDN.STORAGE_HOST,
-        bunny_pull_zone: process.env.BUNNY_PULL_ZONE || envVars.ENV.CDN.PULL_ZONE,
+        bunny_storage_zone: process.env.BUNNY_STORAGE_ZONE || envVars.CDN.BUNNY.STORAGE_ZONE,
+        bunny_access_key: process.env.BUNNY_ACCESS_KEY || envVars.CDN.BUNNY.ACCESS_KEY,
+        bunny_storage_host: process.env.BUNNY_STORAGE_HOST || envVars.CDN.BUNNY.STORAGE_HOST,
+        bunny_pull_zone: process.env.BUNNY_PULL_ZONE || envVars.CDN.BUNNY.PULL_ZONE,
         bunn_cdn_url: process.env.BUNNY_CDN_URL,
-        bunny_cdn_vid_container_name: process.env.BUNNY_CDN_VID_CONTAINER_NAME || envVars.ENV.CDN.VID_CONTAINER_NAME,
-        bunny_cdn_thumbnail_container_name: process.env.BUNNY_CDN_THUMBNAIL_CONTAINER_NAME || envVars.ENV.CDN.THUMBNAIL_CONTAINER_NAME,
-        local_upload_path: process.env.LOCAL_STORAGE_PATH || envVars.ENV.CDN.LOCAL_STORAGE_PATH,
+        bunny_cdn_vid_container_name: process.env.BUNNY_CDN_VID_CONTAINER_NAME || envVars.CDN.BUNNY.VID_CONTAINER_NAME,
+        bunny_cdn_thumbnail_container_name: process.env.BUNNY_CDN_THUMBNAIL_CONTAINER_NAME || envVars.CDN.BUNNY.THUMBNAIL_CONTAINER_NAME,
+        local_upload_path: process.env.LOCAL_STORAGE_PATH || envVars.CDN.BUNNY.LOCAL_STORAGE_PATH,
     }
 };
 

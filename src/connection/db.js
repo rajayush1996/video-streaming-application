@@ -1,3 +1,4 @@
+/* eslint-disable no-unused-vars */
 const mongoose = require("mongoose");
 const logger = require("../features/logger");
 const config = require("../../config");
@@ -37,7 +38,7 @@ const connectDB = async () => {
         }
         logger.info("db connected");
         await seedEmailProviders();
-        loadQueues();
+        // loadQueues();
     } catch (err) {
         logger.error("db error", err);
     }

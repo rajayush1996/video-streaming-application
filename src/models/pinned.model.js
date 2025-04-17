@@ -20,7 +20,7 @@ const PinnedPostSchema = new Schema({
 PinnedPostSchema.plugin(toJSON);
 PinnedPostSchema.plugin(paginate);
 
-PinnedPostSchema.pre('save', async function (next) {
+PinnedPostSchema.pre('validate', async function (next) {
     const pinned = this;
     if (!pinned._id) {
         pinned._id = utils.uuid('pin-');

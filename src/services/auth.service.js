@@ -22,7 +22,8 @@ class AuthService {
             }
 
             // Add password hashing
-            const hashedPassword = await bcrypt.hash(password, authentication.salt_rounds);
+            // const hashedPassword = await bcrypt.hash(password, authentication.salt_rounds);
+            // console.log("🚀 ~ AuthService ~ signUpUser ~ hashedPassword:", hashedPassword);
 
             // Generate email verification token
             const emailVerificationToken = uuidv4();
@@ -31,7 +32,7 @@ class AuthService {
             // Create user with hashed password
             await UserService.createUser({
                 email,
-                password: hashedPassword,
+                password,
                 role,
                 isEmailVerified: false,
                 emailVerificationToken,
@@ -94,7 +95,7 @@ class AuthService {
             const emailVerificationExpires = new Date(Date.now() + 15 * 60 * 1000);
             await UserService.updateUser(user._id, { emailVerificationToken, emailVerificationExpires });
 
-            const verificationUrl = `${emailVerification.verification_url}/api/v1/auth/verify-email?token=${emailVerificationToken}`;
+            const verificationUrl = `${emailVerification.verification_url}/verify-email?token=${emailVerificationToken}`;
             await sendEmail(email, "Verify Your Email", `Click the link to verify: ${verificationUrl}`);
 
             return { message: 'Verification email resent successfully.', success: true };
@@ -108,15 +109,18 @@ class AuthService {
     async signInUser(body) {
         try {
             const { email, password } = body;
+            console.log("🚀 ~ AuthService ~ signInUser ~ password:", password);
 
             // Check if user exists
             const user = await UserService.getUserByEmail(email);
+            console.log("🚀 ~ AuthService ~ signInUser ~ user:", user);
             if (!user) {
                 throw new ApiError(httpStatus.NOT_FOUND, 'User not found.');
             }
 
             // Validate password
             const isPasswordValid = await bcrypt.compare(password, user.password);
+            console.log("🚀 ~ AuthService ~ signInUser ~ isPasswordValid:", isPasswordValid);
             if (!isPasswordValid) {
                 throw new ApiError(httpStatus.UNAUTHORIZED, 'Invalid credentials.');
             }

@@ -118,15 +118,15 @@ async function onListening() {
         }
 
         // Critical: Attempt to connect to Redis
-        try {
-            if (!redisClient.isOpen) {
-                await redisClient.connect();  // Ensure Redis is connected
-                logger.info('Redis connection established successfully');
-            }
-        } catch (redisErr) {
-            logger.error('Redis connection failed:', redisErr.message);
-            process.exit(1);  // Exit if Redis connection fails
-        }
+        // try {
+        //     if (!redisClient.isOpen) {
+        //         await redisClient.connect();  // Ensure Redis is connected
+        //         logger.info('Redis connection established successfully');
+        //     }
+        // } catch (redisErr) {
+        //     logger.error('Redis connection failed:', redisErr.message);
+        //     process.exit(1);  // Exit if Redis connection fails
+        // }
 
     } catch (err) {
         // Handle any unexpected critical errors

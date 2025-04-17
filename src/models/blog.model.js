@@ -28,7 +28,7 @@ blogSchema.plugin(paginate);
 
 
 // Pre-save hook to hash password before saving user
-blogSchema.pre('save', async function (next) {
+blogSchema.pre('validate', async function (next) {
     const user = this;
 
     // Generate UUID if _id is not present

@@ -35,12 +35,12 @@ const userSchema = new Schema(
                 type: String,
                 required: false, // Optional phone number
                 trim: true,
-                unique: true,
+                unique: false,
             },
         },
         emailVerificationToken: {
             type: String,
-            unique: true
+            unique: false,
         },
         emailVerificationExpires: { type: Date, required: false },
         email: {
@@ -123,7 +123,7 @@ userSchema.plugin(toJSON);
 userSchema.plugin(paginate);
 
 // Pre-save hook to hash password before saving user
-userSchema.pre('save', async function (next) {
+userSchema.pre('validate', async function (next) {
     const user = this;
 
     // Generate UUID if _id is not present
