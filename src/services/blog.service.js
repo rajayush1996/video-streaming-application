@@ -7,20 +7,37 @@ const httpStatus = require("http-status");
 /**
  * Create a new blog
  * @param {Object} blogData - The blog data
+ * @param {string} adminId - The ID of the admin creating the blog
  * @returns {Promise<Blog>}
  */
-exports.createBlog = async (blogData) => {
+exports.createBlog = async (blogData, adminId) => {
+    const session = await Blog.startSession();
+    session.startTransaction();
+
     try {
-        const blog = new Blog(blogData);
-        await blog.save();
-        
+        const blog = new Blog({
+            ...blogData,
+            admin: adminId
+        });
+        await blog.save({ session });
+
         // Publish blog created event
-        await blogEventService.publishBlogCreated(blog);
+        const publishSuccess = await blogEventService.publishBlogCreated(blog);
         
+        if (!publishSuccess) {
+            await session.abortTransaction();
+            throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, "Failed to publish blog event");
+        }
+
+        await session.commitTransaction();
         return blog;
     } catch (error) {
+        await session.abortTransaction();
         logger.error("Error in createBlog service:", error);
+        if (error instanceof ApiError) throw error;
         throw new ApiError(httpStatus.BAD_REQUEST, "Error creating blog");
+    } finally {
+        session.endSession();
     }
 };
 
@@ -32,18 +49,26 @@ exports.createBlog = async (blogData) => {
  */
 exports.getAllBlogs = async (filter = {}, options = {}) => {
     try {
-        const { page = 1, limit = 10, sortBy = "createdAt", includeDeleted = false } = options;
+        const { page = 1, limit = 10, sortBy = "createdAt", includeDeleted = false, category } = options;
         
         // Add deletedAt filter if not including deleted blogs
         if (!includeDeleted) {
             filter.deletedAt = null;
+        }
+
+        // Add category filter if provided
+        if (category) {
+            filter.category = category;
         }
         
         const blogs = await Blog.paginate(filter, {
             page,
             limit,
             sort: { [sortBy]: -1 },
-            lean: true
+            lean: true,
+            populate: [
+                { path: 'admin', select: 'name email' }
+            ]
         });
         
         return blogs;
@@ -68,7 +93,9 @@ exports.getBlogById = async (id, includeDeleted = false) => {
             query.where({ deletedAt: null });
         }
         
-        const blog = await query.lean();
+        const blog = await query
+            .populate('admin', 'name email')
+            .lean();
         
         if (!blog) {
             throw new ApiError(httpStatus.NOT_FOUND, "Blog not found");
@@ -88,25 +115,38 @@ exports.getBlogById = async (id, includeDeleted = false) => {
  * @returns {Promise<Blog>}
  */
 exports.updateBlog = async (id, updateData) => {
+    const session = await Blog.startSession();
+    session.startTransaction();
+
     try {
         const blog = await Blog.findByIdAndUpdate(
             id,
             { $set: updateData },
-            { new: true, runValidators: true }
+            { new: true, runValidators: true, session }
         );
         
         if (!blog) {
+            await session.abortTransaction();
             throw new ApiError(httpStatus.NOT_FOUND, "Blog not found");
         }
         
         // Publish blog updated event
-        await blogEventService.publishBlogUpdated(blog);
+        const publishSuccess = await blogEventService.publishBlogUpdated(blog);
         
+        if (!publishSuccess) {
+            await session.abortTransaction();
+            throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, "Failed to publish blog event");
+        }
+
+        await session.commitTransaction();
         return blog;
     } catch (error) {
+        await session.abortTransaction();
         logger.error(`Error in updateBlog service for ID ${id}:`, error);
         if (error instanceof ApiError) throw error;
         throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, "Error updating blog");
+    } finally {
+        session.endSession();
     }
 };
 
@@ -116,25 +156,38 @@ exports.updateBlog = async (id, updateData) => {
  * @returns {Promise<Blog>}
  */
 exports.deleteBlog = async (id) => {
+    const session = await Blog.startSession();
+    session.startTransaction();
+
     try {
         const blog = await Blog.findByIdAndUpdate(
             id,
             { $set: { deletedAt: new Date() } },
-            { new: true, runValidators: true }
+            { new: true, runValidators: true, session }
         );
         
         if (!blog) {
+            await session.abortTransaction();
             throw new ApiError(httpStatus.NOT_FOUND, "Blog not found");
         }
         
         // Publish blog deleted event
-        await blogEventService.publishBlogDeleted(blog._id, blog.author);
+        const publishSuccess = await blogEventService.publishBlogDeleted(blog._id, blog.author);
         
+        if (!publishSuccess) {
+            await session.abortTransaction();
+            throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, "Failed to publish blog event");
+        }
+
+        await session.commitTransaction();
         return blog;
     } catch (error) {
+        await session.abortTransaction();
         logger.error(`Error in deleteBlog service for ID ${id}:`, error);
         if (error instanceof ApiError) throw error;
         throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, "Error deleting blog");
+    } finally {
+        session.endSession();
     }
 };
 

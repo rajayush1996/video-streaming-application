@@ -7,7 +7,11 @@ const blogSchema = new mongoose.Schema(
     {
         title: { type: String, required: true, trim: true, maxlength: 200 },
         content: { type: String, required: true },
-        author: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
+        admin: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true }, // Admin who created/approved the blog
+        category: { 
+            type: String, 
+            required: true,
+        },
         status: { type: String, enum: ["draft", "published"], default: "draft" },
         publishDate: { type: Date },
         deletedAt: { type: Date, default: null },
@@ -27,13 +31,13 @@ blogSchema.plugin(toJSON);
 blogSchema.plugin(paginate);
 
 
-// Pre-save hook to hash password before saving user
-blogSchema.pre('validate', async function (next) {
-    const user = this;
+// Pre-save hook to generate UUID and set admin
+blogSchema.pre('save', async function (next) {
+    const blog = this;
 
     // Generate UUID if _id is not present
-    if (!user._id) {
-        user._id = utils.uuid('bl-');
+    if (!blog._id) {
+        blog._id = utils.uuid('bl-');
     }
 
     next();

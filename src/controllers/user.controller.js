@@ -21,7 +21,20 @@ const getUserById = async (req, res, next) => {
         const user = await UserService.getUserById(userId);
         
         if (user) {
-            responseHandler(res, httpStatus.OK, '', user)
+            // Create a safe user object without sensitive data
+            const safeUser = {
+                id: user._id,
+                firstName: user.firstName,
+                lastName: user.lastName,
+                username: user.username,
+                email: user.email,
+                role: user.role,
+                isActive: user.isActive,
+                createdAt: user.createdAt,
+                updatedAt: user.updatedAt
+            };
+            
+            responseHandler(res, httpStatus.OK, 'User details retrieved successfully', safeUser);
         } else {
             res.status(httpStatus.NOT_FOUND).json({ message: 'User details not found' });
         }
@@ -61,9 +74,34 @@ const deleteUser = async (req, res, next) => {
     }
 };
 
+/**
+ * Update user profile
+ * @param {Object} req - Express request object
+ * @param {Object} res - Express response object
+ * @param {Function} next - Express next middleware
+ */
+const updateProfile = async (req, res, next) => {
+    try {
+        const { userId } = req.user;
+        const profileData = req.body;
+
+        const updatedUser = await UserService.updateUserProfile(userId, profileData);
+        
+        res.status(httpStatus.OK).json({
+            success: true,
+            message: 'Profile updated successfully',
+            data: updatedUser
+        });
+    } catch (error) {
+        logger.error('Error updating user profile:', error);
+        next(error);
+    }
+};
+
 module.exports = {
     createUser,
     getUserById,
     updateUser,
     deleteUser,
+    updateProfile
 };

@@ -1,6 +1,8 @@
 const MediaMeta = require("../models/mediaMeta.model");
 const File = require("../models/file.model");
 const { formatApiResult } = require("../utils/formatApiResult.util");
+const { ApiError } = require("../features/error");
+const httpStatus = require("http-status");
 
 class MediaMetaService {
     async createMediaMetaInfo(metaInfo) {
@@ -18,6 +20,7 @@ class MediaMetaService {
      * @param {string} [options.sortBy] - Sorting criteria using the format: sortField:(desc|asc)
      * @param {number} [options.limit] - Maximum number of results per page (default = 10)
      * @param {number} [options.page] - Current page (default = 1)
+     * @param {string} [options.category] - Filter by category
      * @returns {Promise<Object>} - Paginated results
      */
     async getMediaMetadata(filter = {}, options = {}) {
@@ -32,12 +35,27 @@ class MediaMetaService {
             // Merge with provided options
             const queryOptions = { ...defaultOptions, ...options, lean: true };
             
+            // Handle category filter
+            if (options.category && options.category !== 'all') {
+                filter.category = options.category;
+            }
+            
             // Use the paginate plugin
             const result = await MediaMeta.paginate(filter, queryOptions);
-            // result.results = (result.results || []).map((doc) => doc.toJSON); // Ensure results is an array
-            result.results = formatApiResult(result.results || []);
-            // Enhance results with file URLs
+            
+            // Format results and enhance with file URLs
             if (result.results && result.results.length > 0) {
+                // Convert each result to plain object and remove mongoose internals
+                const plainResults = result.results.map(doc => {
+                    const plainObject = doc.toObject ? doc.toObject() : doc;
+                    delete plainObject.__v;
+                    delete plainObject.$__;
+                    delete plainObject.$isNew;
+                    delete plainObject._doc;
+                    return plainObject;
+                });
+                
+                result.results = formatApiResult(plainResults);
                 const enhancedResults = await this.enhanceWithFileUrls(result.results);
                 result.results = enhancedResults;
             }
@@ -145,6 +163,108 @@ class MediaMetaService {
         } catch (error) {
             console.error("Error enhancing with file URLs:", error);
             return mediaMetadata;
+        }
+    }
+
+    /**
+     * Update media metadata
+     * @param {string} id - Media metadata ID
+     * @param {Object} updateBody - Update body
+     * @returns {Promise<Object>} - Updated media metadata
+     */
+    async updateMediaMetadata(id, updateBody) {
+        try {
+            const mediaMeta = await MediaMeta.findById(id);
+            if (!mediaMeta) {
+                throw new ApiError(httpStatus.NOT_FOUND, 'Media metadata not found');
+            }
+
+            // Update the document
+            Object.assign(mediaMeta, updateBody);
+            await mediaMeta.save();
+
+            // Convert to plain object and remove mongoose internals
+            const plainObject = mediaMeta.toObject();
+            delete plainObject.__v;
+            delete plainObject.$__;
+            delete plainObject.$isNew;
+            delete plainObject._doc;
+
+            // Format and enhance with URLs
+            const formattedResult = formatApiResult(plainObject);
+            const enhancedResult = await this.enhanceWithFileUrls([formattedResult]);
+            
+            return enhancedResult[0];
+        } catch (error) {
+            throw error;
+        }
+    }
+
+    /**
+     * Delete media metadata (soft delete)
+     * @param {string} id - Media metadata ID
+     * @returns {Promise<Object>} - Deleted media metadata
+     */
+    async deleteMediaMetadata(id) {
+        try {
+            const mediaMeta = await MediaMeta.findById(id);
+            if (!mediaMeta) {
+                throw new ApiError(httpStatus.NOT_FOUND, 'Media metadata not found');
+            }
+
+            // Soft delete
+            mediaMeta.isDeleted = true;
+            mediaMeta.deletedAt = new Date();
+            await mediaMeta.save();
+
+            // Convert to plain object and remove mongoose internals
+            const plainObject = mediaMeta.toObject();
+            delete plainObject.__v;
+            delete plainObject.$__;
+            delete plainObject.$isNew;
+            delete plainObject._doc;
+
+            // Format and enhance with URLs
+            const formattedResult = formatApiResult(plainObject);
+            const enhancedResult = await this.enhanceWithFileUrls([formattedResult]);
+            
+            return enhancedResult[0];
+        } catch (error) {
+            throw error;
+        }
+    }
+
+    /**
+     * Restore soft-deleted media metadata
+     * @param {string} id - Media metadata ID
+     * @returns {Promise<Object>} - Restored media metadata
+     */
+    async restoreMediaMetadata(id) {
+        try {
+            const mediaMeta = await MediaMeta.findById(id);
+            if (!mediaMeta) {
+                throw new ApiError(httpStatus.NOT_FOUND, 'Media metadata not found');
+            }
+
+            // Restore
+            mediaMeta.isDeleted = false;
+            mediaMeta.deletedAt = undefined;
+            await mediaMeta.save();
+
+            // Convert to plain object and remove mongoose internals
+            const plainObject = mediaMeta.toObject();
+            delete plainObject.__v;
+            delete plainObject.$__;
+            delete plainObject.$isNew;
+            delete plainObject._doc;
+
+            // Format and enhance with URLs
+            const formattedResult = formatApiResult(plainObject);
+            const enhancedResult = await this.enhanceWithFileUrls([formattedResult]);
+            
+            return enhancedResult[0];
+        } catch (error) {
+            throw error;
         }
     }
 }

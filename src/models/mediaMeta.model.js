@@ -8,6 +8,8 @@ const mediaMetadataSchema = new mongoose.Schema({
     title: { type: String },
     description: { type: String },
     category: { type: String },
+    isDeleted: { type: Boolean, default: false },
+    deletedAt: { type: Date },
 }, { timestamps: true });
 
 mediaMetadataSchema.plugin(toJSON);

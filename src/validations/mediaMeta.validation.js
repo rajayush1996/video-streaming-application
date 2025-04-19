@@ -13,6 +13,41 @@ const getMediaMetadataSchema = {
     })
 };
 
+/**
+ * Validation schema for updating media metadata
+ */
+const updateMediaMetadataSchema = {
+    params: Joi.object().keys({
+        id: Joi.string().required().description('Media metadata ID')
+    }),
+    body: Joi.object().keys({
+        title: Joi.string().optional(),
+        description: Joi.string().optional(),
+        category: Joi.string().optional()
+    })
+};
+
+/**
+ * Validation schema for deleting media metadata
+ */
+const deleteMediaMetadataSchema = {
+    params: Joi.object().keys({
+        id: Joi.string().required().description('Media metadata ID')
+    })
+};
+
+/**
+ * Validation schema for restoring media metadata
+ */
+const restoreMediaMetadataSchema = {
+    params: Joi.object().keys({
+        id: Joi.string().required().description('Media metadata ID')
+    })
+};
+
 module.exports = {
-    getMediaMetadataSchema
+    getMediaMetadataSchema,
+    updateMediaMetadataSchema,
+    deleteMediaMetadataSchema,
+    restoreMediaMetadataSchema
 }; 

@@ -22,109 +22,63 @@ const userSchema = new Schema(
             trim: true,
             maxlength: 200,
         },
-        lname: {
+        username: {
             type: String,
+            required: true,
+            unique: true,
+            trim: true,
             lowercase: true,
+            minlength: 3,
+            maxlength: 30,
         },
         phoneNumber: {
             countryCode: {
                 type: String,
-                required: false, // Optional country code
+                required: false,
             },
             number: {
                 type: String,
-                required: false, // Optional phone number
+                required: false,
                 trim: true,
                 unique: false,
             },
         },
-        emailVerificationToken: {
-            type: String,
-            unique: false,
-        },
-        emailVerificationExpires: { type: Date, required: false },
-        email: {
-            type: String,
-            required: true,
-            unique: true, // Ensure email uniqueness
-            trim: true,
-            lowercase: true,
-            match: [/^\S+@\S+\.\S+$/, 'Please enter a valid email address.'], // Email format validation
-        },
-        isEmailVerified: {
-            type: Boolean,
-            default: false,
-        },
-        hashedOtp: {
-            type: String,
-        },
         password: {
             type: String,
             required: true,
-            minlength: 8, // Ensure password has a minimum length
+            minlength: 8,
         },
-        dob: {
-            type: Date,
-            required: false,
-            validate: {
-                validator(value) {
-                    // Validate DOB to ensure the user is at least 18 years old
-                    const today = new Date();
-                    const age = today.getFullYear() - value.getFullYear();
-                    if (
-                        age > 18
-            || (age === 18
-              && today.getMonth() >= value.getMonth()
-              && today.getDate() >= value.getDate())
-                    ) {
-                        return true;
-                    }
-
-                    return false;
-                },
-                message: 'User must be at least 18 years old.',
-            },
+        role: {
+            type: String,
+            enum: ['USER', 'ADMIN'],
+            default: 'USER',
         },
         isActive: {
             type: Boolean,
             default: true,
         },
-        isOtpVerified: {
-            type: Boolean,
-            default: false,
+        createdAt: {
+            type: Date,
+            default: Date.now,
         },
-        description: {
-            type: String,
-            trim: true,
+        updatedAt: {
+            type: Date,
+            default: Date.now,
         },
-        role: {
-            type: String,
-            enum: ['USER', 'ADMIN'],
-        },
-        mobNumber: {
-            type: String,
-        },
-        subscriptionType: { 
-            type: String, enum: ['basic', 'premium'], 
-            default: 'basic' 
-        },
-        profileUrl: {
-            type: String
-        }
     },
     {
         timestamps: true,
-        versionKey: false,
-    },
+    }
 );
 
-// Add plugin that converts mongoose to json
+// Add plugins
 userSchema.plugin(toJSON);
 userSchema.plugin(paginate);
 
 // Pre-save hook to hash password before saving user
 userSchema.pre('validate', async function (next) {
     const user = this;
+    console.log("🚀 ~ user:", user);
 
     // Generate UUID if _id is not present
     if (!user._id) {

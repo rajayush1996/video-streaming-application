@@ -18,7 +18,8 @@ class RabbitMQService {
 
         try {
             const { host, port, user, password } = config.rabbitmq;
-            const url = `amqp://${user}:${password}@${host}:${port}`;
+            // const url = `amqp://${user}:${password}@${host}:${port}`;
+            const url = host;
             
             this.connection = await amqp.connect(url);
             this.channel = await this.connection.createChannel();

@@ -10,6 +10,7 @@ const swaggerUi = require('swagger-ui-express');
 const swaggerFile = require('./swagger_output.json');
 const cors = require('cors');
 const fileUpload = require("express-fileupload");
+const { runSeeders } = require('./database/seeders');
 
 
 // global features importing
@@ -45,6 +46,11 @@ app.use('/api/v1', v1Routes);
 
 // Swagger documentation route
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerFile));
+
+// Initialize database seeders
+runSeeders().catch((error) => {
+    logger.error('Error running seeders:', error);
+});
 
 app.use(errorConverter);
 app.use(errorHandler);

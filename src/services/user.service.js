@@ -3,23 +3,56 @@
 const User = require('../models/user.model');
 // const AuthService = require('../services/auth.service');
 const utils = require('../utils/utils');
+const httpStatus = require('http-status');
+const { ApiError } = require('../features/error');
+const logger = require('../features/logger');
+
 class UserService {
-    // Create a new user
+    /**
+     * Create a new user
+     * @param {Object} userData - User data
+     * @returns {Promise<User>}
+     */
     async createUser(userData) {
         try {
             const user = new User(userData);
-            return await user.save();
+            await user.save();
+            return user;
         } catch (error) {
-            throw error;
+            logger.error('Error creating user:', error);
+            if (error.code === 11000) {
+                throw new ApiError(httpStatus.BAD_REQUEST, 'Username already exists');
+            }
+            throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, 'Error creating user');
+        }
+    }
+
+    /**
+     * Get user by username
+     * @param {string} username - Username
+     * @returns {Promise<User>}
+     */
+    async getUserByUsername(username) {
+        try {
+            return await User.findOne({ username });
+        } catch (error) {
+            logger.error('Error fetching user by username:', error);
+            throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, 'Error fetching user');
         }
     }
 
     // Retrieve a user by ID
     async getUserById(userId) {
         try {
-            return await User.findById(userId,  "firstName lastName email role phoneNumber subscriptionType createdAt profileUrl isActive");
+            const user = await User.findById(userId);
+            if (!user) {
+                throw new ApiError(httpStatus.NOT_FOUND, 'User not found');
+            }
+            return user;
         } catch (error) {
-            throw error;
+            logger.error('Error fetching user:', error);
+            if (error instanceof ApiError) throw error;
+            throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, 'Error fetching user');
         }
     }
 
@@ -43,13 +76,32 @@ class UserService {
         } 
     }
 
-    // Update user information
-    async updateUser(userId, userData) {
+    /**
+     * Update user by ID
+     * @param {string} userId - User ID
+     * @param {Object} updateData - Update data
+     * @returns {Promise<User>}
+     */
+    async updateUser(userId, updateData) {
         try {
-            const options = { new: true, upsert: true, select: "firstName lastName email role phoneNumber subscriptionType createdAt profileUrl isActive" };
-            return await User.findByIdAndUpdate(userId, userData, options);
+            const user = await User.findByIdAndUpdate(
+                userId,
+                { ...updateData, updatedAt: Date.now() },
+                { new: true, runValidators: true }
+            );
+
+            if (!user) {
+                throw new ApiError(httpStatus.NOT_FOUND, 'User not found');
+            }
+
+            return user;
         } catch (error) {
-            throw error;
+            logger.error('Error updating user:', error);
+            if (error instanceof ApiError) throw error;
+            if (error.code === 11000) {
+                throw new ApiError(httpStatus.BAD_REQUEST, 'Username already exists');
+            }
+            throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, 'Error updating user');
         }
     }
 
@@ -85,26 +137,79 @@ class UserService {
         }
     }
 
-    // Delete a user by ID
+    /**
+     * Delete user by ID
+     * @param {string} userId - User ID
+     * @returns {Promise<void>}
+     */
     async deleteUser(userId) {
         try {
-            return await User.findByIdAndDelete(userId);
+            const user = await User.findByIdAndDelete(userId);
+            if (!user) {
+                throw new ApiError(httpStatus.NOT_FOUND, 'User not found');
+            }
         } catch (error) {
-            throw error;
+            logger.error('Error deleting user:', error);
+            if (error instanceof ApiError) throw error;
+            throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, 'Error deleting user');
         }
     }
 
-    // Retrieve a list of all users
-    async getAllUsers() {
+    /**
+     * Get all users with pagination
+     * @param {Object} options - Pagination options
+     * @returns {Promise<Object>}
+     */
+    async getAllUsers(options) {
         try {
-            return await User.find();
+            const { page = 1, limit = 10, sortBy = '-createdAt' } = options;
+            const result = await User.paginate({}, {
+                page,
+                limit,
+                sort: sortBy
+            });
+            return result;
         } catch (error) {
-            throw error;
+            logger.error('Error fetching users:', error);
+            throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, 'Error fetching users');
         }
     }
 
     async getUserByVerificationToken(token) {
         return await User.findOne({ emailVerificationToken: token, emailVerificationExpires: { $gt: new Date() } });
+    }
+
+    async updateUserProfile(userId, profileData) {
+        try {
+            const options = { 
+                new: true, 
+                select: "firstName lastName email role phoneNumber subscriptionType createdAt profileUrl isActive" 
+            };
+            return await User.findByIdAndUpdate(userId, profileData, options);
+        } catch (error) {
+            throw error;
+        }
+    }
+
+    /**
+     * Get user by username or email
+     * @param {string} identifier - Username or email
+     * @returns {Promise<User>}
+     */
+    async getUserByIdentifier(identifier) {
+        try {
+            // Check if identifier is email (contains @)
+            const isEmail = identifier.includes('@');
+            
+            if (isEmail) {
+                return await User.findOne({ email: identifier });
+            } else {
+                return await User.findOne({ username: identifier });
+            }
+        } catch (error) {
+            logger.error('Error fetching user by identifier:', error);
+            throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, 'Error fetching user');
+        }
     }
 
 }

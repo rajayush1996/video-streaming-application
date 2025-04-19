@@ -108,26 +108,23 @@ class AuthService {
     // User SignIn
     async signInUser(body) {
         try {
-            const { email, password } = body;
-            console.log("🚀 ~ AuthService ~ signInUser ~ password:", password);
+            const { username, password } = body;
 
             // Check if user exists
-            const user = await UserService.getUserByEmail(email);
-            console.log("🚀 ~ AuthService ~ signInUser ~ user:", user);
+            const user = await UserService.getUserByUsername(username);
             if (!user) {
                 throw new ApiError(httpStatus.NOT_FOUND, 'User not found.');
             }
 
             // Validate password
             const isPasswordValid = await bcrypt.compare(password, user.password);
-            console.log("🚀 ~ AuthService ~ signInUser ~ isPasswordValid:", isPasswordValid);
             if (!isPasswordValid) {
                 throw new ApiError(httpStatus.UNAUTHORIZED, 'Invalid credentials.');
             }
 
-            // Check if email is verified
-            if (!user.isEmailVerified) {
-                throw new ApiError(httpStatus.FORBIDDEN, 'Please verify your email before logging in.');
+            // Check if user is active
+            if (!user.isActive) {
+                throw new ApiError(httpStatus.FORBIDDEN, 'User account is inactive.');
             }
 
             // Generate JWT tokens
@@ -137,7 +134,7 @@ class AuthService {
                 message: 'User logged in successfully',
                 user: {
                     id: user._id,
-                    email: user.email,
+                    username: user.username,
                     role: user.role,
                 },
                 tokens,
@@ -150,7 +147,7 @@ class AuthService {
 
     // Generate JWT Tokens
     generateAuthTokens(user) {
-        const payload = { id: user._id, email: user.email, role: user.role };
+        const payload = { id: user._id, username: user.username, role: user.role };
 
         const accessToken = jwt.sign(payload, authentication.jwt_token_secret_key, {
             expiresIn: authentication.jwt_token_expiration,

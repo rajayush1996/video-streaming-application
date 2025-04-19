@@ -33,4 +33,65 @@ exports.getMediaMetadata = async (req, res, next) => {
         logger.error("Error fetching media metadata:", error);
         next(error);
     }
+};
+
+/**
+ * Update media metadata
+ * @route PATCH /api/v1/media-metadata/:id
+ */
+exports.updateMediaMetadata = async (req, res, next) => {
+    try {
+        const { id } = req.params;
+        const updateBody = req.body;
+        
+        const result = await mediaMetaService.updateMediaMetadata(id, updateBody);
+        
+        return res.status(httpStatus.OK).json({
+            data: result,
+            message: "Media metadata updated successfully"
+        });
+    } catch (error) {
+        logger.error("Error updating media metadata:", error);
+        next(error);
+    }
+};
+
+/**
+ * Delete media metadata (soft delete)
+ * @route DELETE /api/v1/media-metadata/:id
+ */
+exports.deleteMediaMetadata = async (req, res, next) => {
+    try {
+        const { id } = req.params;
+        
+        const result = await mediaMetaService.deleteMediaMetadata(id);
+        
+        return res.status(httpStatus.OK).json({
+            data: result,
+            message: "Media metadata deleted successfully"
+        });
+    } catch (error) {
+        logger.error("Error deleting media metadata:", error);
+        next(error);
+    }
+};
+
+/**
+ * Restore soft-deleted media metadata
+ * @route POST /api/v1/media-metadata/:id/restore
+ */
+exports.restoreMediaMetadata = async (req, res, next) => {
+    try {
+        const { id } = req.params;
+        
+        const result = await mediaMetaService.restoreMediaMetadata(id);
+        
+        return res.status(httpStatus.OK).json({
+            data: result,
+            message: "Media metadata restored successfully"
+        });
+    } catch (error) {
+        logger.error("Error restoring media metadata:", error);
+        next(error);
+    }
 }; 

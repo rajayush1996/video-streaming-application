@@ -8,7 +8,11 @@ const logger = require("../features/logger");
  */
 exports.createBlog = async (req, res, next) => {
     try {
-        const blog = await blogService.createBlog(req.body);
+        const { category, ...blogData } = req.body;
+        const blog = await blogService.createBlog(
+            { ...blogData, category },
+            req.user._id // Admin ID from JWT
+        );
         return res.status(httpStatus.CREATED).json({ 
             message: "Blog created successfully", 
             blog 
@@ -26,12 +30,12 @@ exports.createBlog = async (req, res, next) => {
 exports.getAllBlogs = async (req, res, next) => {
     try {
         // Extract query parameters
-        const { page, limit, sortBy, status, author, includeDeleted } = req.query;
+        const { page, limit, sortBy, status, category, includeDeleted } = req.query;
         
         // Build filter
         const filter = {};
         if (status) filter.status = status;
-        if (author) filter.author = author;
+        if (category) filter.category = category;
         
         // Build options
         const options = {};
@@ -39,6 +43,7 @@ exports.getAllBlogs = async (req, res, next) => {
         if (limit) options.limit = parseInt(limit);
         if (sortBy) options.sortBy = sortBy;
         if (includeDeleted) options.includeDeleted = includeDeleted === 'true';
+        if (category) options.category = category;
         
         const blogs = await blogService.getAllBlogs(filter, options);
         return res.status(httpStatus.OK).json(blogs);

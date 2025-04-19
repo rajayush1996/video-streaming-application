@@ -4,6 +4,8 @@
  * Module dependencies.
  */
 
+const { connectRabbitMQ } = require('../connection/rabbitmq.connection');
+
 const app = require('../app');
 // const debug = require('debug')('vsa:server');
 const http = require('http');
@@ -112,21 +114,22 @@ async function onListening() {
         try {
             await connectDB();
             logger.info('Database connection established successfully');
+            await connectRabbitMQ()
         } catch (dbErr) {
             logger.error('Database connection failed:', dbErr.message);
             process.exit(1);  // Exit if database connection fails
         }
 
         // Critical: Attempt to connect to Redis
-        // try {
-        //     if (!redisClient.isOpen) {
-        //         await redisClient.connect();  // Ensure Redis is connected
-        //         logger.info('Redis connection established successfully');
-        //     }
-        // } catch (redisErr) {
-        //     logger.error('Redis connection failed:', redisErr.message);
-        //     process.exit(1);  // Exit if Redis connection fails
-        // }
+        try {
+            if (!redisClient.isOpen) {
+                await redisClient.connect();  // Ensure Redis is connected
+                logger.info('Redis connection established successfully');
+            }
+        } catch (redisErr) {
+            logger.error('Redis connection failed:', redisErr.message);
+            process.exit(1);  // Exit if Redis connection fails
+        }
 
     } catch (err) {
         // Handle any unexpected critical errors
