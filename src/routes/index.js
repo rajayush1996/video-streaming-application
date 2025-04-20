@@ -6,6 +6,9 @@ const blogRouter = require('./blog.route');
 const userRouter = require('./user.route');
 const mediaMetaRouter = require('./mediaMeta.route');
 const categoryRouter = require('./category.route');
+const dashboardRouter = require('./dashboard.route');
+const userAdminRouter = require('./userAdmin.route');
+const reelsRouter = require('./reels.route');
 
 const router = express.Router();
 
@@ -23,5 +26,8 @@ router.use('/blogs', blogRouter);
 router.use('/user', userRouter);
 router.use('/media-metadata', mediaMetaRouter);
 router.use('/categories', categoryRouter);
+router.use('/dashboard', dashboardRouter);
+router.use('/admin/users', userAdminRouter);
+router.use('/reels', reelsRouter);
 
 module.exports = router;

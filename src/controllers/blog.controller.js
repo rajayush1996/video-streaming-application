@@ -9,10 +9,15 @@ const logger = require("../features/logger");
 exports.createBlog = async (req, res, next) => {
     try {
         const { category, ...blogData } = req.body;
+
+        console.log("🚀 ~ exports.createBlog= ~  req.user:",  req.user)
+        console.log("🚀 ~ exports.createBlog= ~  req.body:",  req.body)
         const blog = await blogService.createBlog(
             { ...blogData, category },
-            req.user._id // Admin ID from JWT
+            req.user.id // Admin ID from JWT
         );
+
+        
         return res.status(httpStatus.CREATED).json({ 
             message: "Blog created successfully", 
             blog 

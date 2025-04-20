@@ -13,5 +13,6 @@ router.put("/:id", authenticated, blogController.updateBlog);
 // validate(blogSchema),
 router.delete("/:id", authenticated, blogController.deleteBlog);
 router.put("/:id/restore", authenticated, blogController.restoreBlog);
+router.patch("/:id/publish", authenticated, blogController.publishBlog);
 
 module.exports = router;

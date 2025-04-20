@@ -47,15 +47,20 @@ const userSchema = new Schema(
             type: String,
             required: true,
             minlength: 8,
+            private: true,
         },
         role: {
             type: String,
-            enum: ['USER', 'ADMIN'],
+            enum: ['USER', 'ADMIN', 'CREATOR'],
             default: 'USER',
         },
         isActive: {
             type: Boolean,
             default: true,
+        },
+        deletedAt: {
+            type: Date,
+            default: null,
         },
         createdAt: {
             type: Date,

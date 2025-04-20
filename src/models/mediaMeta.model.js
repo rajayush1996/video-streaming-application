@@ -8,6 +8,10 @@ const mediaMetadataSchema = new mongoose.Schema({
     title: { type: String },
     description: { type: String },
     category: { type: String },
+    mediaType: { type: String, enum: ['video', 'reel', 'thumbnail'], default: 'video' },
+    userId: { type: String, ref: 'User' },
+    views: { type: Number, default: 0 },
+    status: { type: String, enum: ['pending', 'approved', 'rejected'], default: 'pending' },
     isDeleted: { type: Boolean, default: false },
     deletedAt: { type: Date },
 }, { timestamps: true });

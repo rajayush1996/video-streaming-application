@@ -94,4 +94,24 @@ exports.restoreMediaMetadata = async (req, res, next) => {
         logger.error("Error restoring media metadata:", error);
         next(error);
     }
+};
+
+/**
+ * Increment view count for a video
+ * @route PUT /api/v1/media-metadata/:id/view
+ * @param {string} req.params.id - Media metadata ID
+ * @returns {Object} - Updated view count
+ */
+exports.incrementViewCount = async (req, res, next) => {
+    try {
+        const result = await mediaMetaService.incrementViewCount(req.params.id);
+        return res.status(httpStatus.OK).json({ 
+            success: true,
+            message: 'View count incremented successfully',
+            data: result
+        });
+    } catch (error) {
+        logger.error(`Error incrementing view count for ID ${req.params.id}:`, error);
+        next(error);
+    }
 }; 

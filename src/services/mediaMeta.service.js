@@ -35,6 +35,9 @@ class MediaMetaService {
             // Merge with provided options
             const queryOptions = { ...defaultOptions, ...options, lean: true };
             
+            // Set isDeleted filter to false by default
+            filter.isDeleted = filter.isDeleted !== undefined ? filter.isDeleted : false;
+            
             // Handle category filter
             if (options.category && options.category !== 'all') {
                 filter.category = options.category;
@@ -263,6 +266,29 @@ class MediaMetaService {
             const enhancedResult = await this.enhanceWithFileUrls([formattedResult]);
             
             return enhancedResult[0];
+        } catch (error) {
+            throw error;
+        }
+    }
+
+    /**
+     * Increment view count for a video
+     * @param {string} id - Media metadata ID
+     * @returns {Promise<Object>} - Updated view count
+     */
+    async incrementViewCount(id) {
+        try {
+            const mediaMeta = await MediaMeta.findByIdAndUpdate(
+                id,
+                { $inc: { views: 1 } }, // Increment views by 1
+                { new: true }
+            );
+            
+            if (!mediaMeta) {
+                throw new ApiError(httpStatus.NOT_FOUND, 'Media metadata not found');
+            }
+            
+            return { views: mediaMeta.views };
         } catch (error) {
             throw error;
         }

@@ -7,7 +7,7 @@ const blogSchema = new mongoose.Schema(
     {
         title: { type: String, required: true, trim: true, maxlength: 200 },
         content: { type: String, required: true },
-        admin: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true }, // Admin who created/approved the blog
+        admin: { type: String, ref: "User", required: true }, // Admin who created/approved the blog
         category: { 
             type: String, 
             required: true,
@@ -15,6 +15,7 @@ const blogSchema = new mongoose.Schema(
         status: { type: String, enum: ["draft", "published"], default: "draft" },
         publishDate: { type: Date },
         deletedAt: { type: Date, default: null },
+        description: { type: String, required: true, trim: true, maxlength: 300 },
     },
     { timestamps: true, versionKey: false, } // Automatically adds createdAt & updatedAt
 );

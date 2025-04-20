@@ -1,7 +1,8 @@
 const uploadProgressModel = require("../models/uploadProgress.model");
-const { handleThumbnailUpload, processVideoChunk } = require("../services/upload.service");
+const uploadService = require("../services/upload.service");
+const { handleThumbnailUpload, processVideoChunk } = uploadService;
 
-exports.uploadVideo = async (req, res) => {
+const uploadVideo = async (req, res) => {
     try {
         console.log("📥 Incoming upload request:", req.body);
 
@@ -36,7 +37,7 @@ exports.uploadVideo = async (req, res) => {
  * API to get the progress of an ongoing file upload.
  * It returns the already uploaded chunk indexes.
  */
-exports.getUploadProgress = async (req, res) => {
+const getUploadProgress = async (req, res) => {
     try {
         const { fileName } = req.query;
 
@@ -52,7 +53,99 @@ exports.getUploadProgress = async (req, res) => {
 
         res.json({ uploadedChunks: progress.uploadedChunks });
     } catch (error) {
-        console.error("❌ Error fetching upload progress:", error);
+        console.error("Error fetching upload progress:", error);
         res.status(500).json({ error: "Internal server error" });
     }
+};
+
+/**
+ * @swagger
+ * /api/v1/upload/reels:
+ *   post:
+ *     summary: Upload a new reel
+ *     tags: [Upload]
+ *     description: Uploads a reel file with a thumbnail
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         multipart/form-data:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               video:
+ *                 type: string
+ *                 format: binary
+ *               thumbnail:
+ *                 type: string
+ *                 format: binary
+ *             required:
+ *               - video
+ *               - thumbnail
+ *     responses:
+ *       '200':
+ *         description: Reel uploaded successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 fileName:
+ *                   type: string
+ *       '400':
+ *         description: Missing required files
+ *       '500':
+ *         description: Server error during upload
+ */
+const uploadReel = async (req, res) => {
+    try {
+        console.log("📥 Incoming reel upload:", req.body);
+  
+        let { fileName, chunkIndex, totalChunks, isThumbnail } = req.body;
+  
+        // ✅ Thumbnail Upload
+        if (isThumbnail === 'true') {
+            if (!req.files || !req.files.thumbnail) {
+                return res.status(400).json({ error: "No thumbnail file provided" });
+            }
+  
+            const userId = req.user?.id || 'anonymous'; // fallback if auth isn't mandatory
+            const result = await uploadService.handleThumbnailUpload(req.files.thumbnail, userId);
+            return res.json(result);
+        }
+  
+        // ✅ Reel Chunk Upload
+        if (!req.files || !req.files.chunk) {
+            return res.status(400).json({ error: "No file chunk provided" });
+        }
+  
+        chunkIndex = parseInt(chunkIndex);
+        totalChunks = parseInt(totalChunks);
+  
+        const userId = req.user?.id || 'anonymous'; // fallback if auth isn't mandatory
+  
+        const result = await uploadService.processVideoChunk(
+            req.files.chunk,
+            fileName,
+            chunkIndex,
+            totalChunks,
+            userId,
+            'reel' // ✅ Default media type
+        );
+  
+        return res.json(result);
+    } catch (error) {
+        console.error("❌ Reel upload error:", error);
+        return res.status(500).json({ error: error.message || "Reel upload failed" });
+    }
+};
+  
+
+module.exports = {
+    uploadVideo,
+    getUploadProgress,
+    uploadReel,
 };

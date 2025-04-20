@@ -101,9 +101,9 @@ exports.uploadToBunnyCDN =async (filePath, fileName, options={}) =>{
 exports.handleThumbnailUpload = async (thumbnail, fileName) => {
     const uploadDir = path.join(__dirname, config.cdn.local_upload_path);
     const thumbPath = path.join(uploadDir, `thumb_${fileName}`);
-    
+    const uniqueDate = new Date().getMilliseconds();
     await thumbnail.mv(thumbPath);
-    const thumbUrl = await exports.uploadToBunnyCDN(thumbPath, `thumb_${fileName}`, { type: 'thumbnail' });
+    const thumbUrl = await exports.uploadToBunnyCDN(thumbPath, `thumb_${fileName}_${uniqueDate}`, { type: 'thumbnail' });
     fs.unlinkSync(thumbPath);
     
     return { message: "Thumbnail uploaded successfully!", thumbUrl };
@@ -168,7 +168,7 @@ exports.processVideoChunk = async (chunk, fileName, chunkIndex, totalChunks) => 
  * @returns {Promise<Object>} - The upload result
  */
 exports.mergeAndUploadChunks = async (fileName, totalChunks, uploadDir) => {
-    console.log(`🔄 Merging chunks for ${fileName}...`);
+    console.log(`Merging chunks for ${fileName}...`);
     
     const finalFilePath = path.join(uploadDir, fileName);
     const writeStream = fs.createWriteStream(finalFilePath);
@@ -177,7 +177,7 @@ exports.mergeAndUploadChunks = async (fileName, totalChunks, uploadDir) => {
         const chunkFile = path.join(uploadDir, `${fileName}.part${i}`);
         
         if (!fs.existsSync(chunkFile)) {
-            console.error(`❌ Missing chunk: ${chunkFile}`);
+            console.error(`Missing chunk: ${chunkFile}`);
             throw new Error("Missing chunk file");
         }
         

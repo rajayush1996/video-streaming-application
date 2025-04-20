@@ -36,4 +36,11 @@ router.delete('/:id', authenticated, validate(deleteMediaMetadataSchema), mediaM
  */
 router.post('/:id/restore', authenticated, validate(restoreMediaMetadataSchema), mediaMetaController.restoreMediaMetadata);
 
+/**
+ * @route PUT /api/v1/media-metadata/:id/view
+ * @desc Increment view count for a video
+ * @access Public - No authentication required to count views
+ */
+router.put('/:id/view', mediaMetaController.incrementViewCount);
+
 module.exports = router; 
