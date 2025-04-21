@@ -99,14 +99,37 @@ exports.uploadToBunnyCDN =async (filePath, fileName, options={}) =>{
  * @returns {Promise<Object>} - The upload result with thumbnail URL
  */
 exports.handleThumbnailUpload = async (thumbnail, fileName) => {
-    const uploadDir = path.join(__dirname, config.cdn.local_upload_path);
-    const thumbPath = path.join(uploadDir, `thumb_${fileName}`);
-    const uniqueDate = new Date().getMilliseconds();
-    await thumbnail.mv(thumbPath);
-    const thumbUrl = await exports.uploadToBunnyCDN(thumbPath, `thumb_${fileName}_${uniqueDate}`, { type: 'thumbnail' });
-    fs.unlinkSync(thumbPath);
-    
-    return { message: "Thumbnail uploaded successfully!", thumbUrl };
+    try {
+        // Ensure the upload directory exists
+        const uploadDir = path.join(__dirname, config.cdn.local_upload_path);
+        if (!fs.existsSync(uploadDir)) {
+            fs.mkdirSync(uploadDir, { recursive: true });
+        }
+  
+        // Create unique file path
+        const uniqueDate = Date.now(); // more unique than just milliseconds
+        const rawFileName = `thumb_${fileName}`;
+        const thumbPath = path.join(uploadDir, rawFileName);
+  
+        // Save file temporarily
+        await thumbnail.mv(thumbPath);
+  
+        // Upload to BunnyCDN
+        const thumbUrl = await exports.uploadToBunnyCDN(
+            thumbPath,
+            `thumb_${fileName}_${uniqueDate}`, 
+            { type: 'thumbnail' }
+        );
+  
+        // Clean up local temp file
+        fs.unlinkSync(thumbPath);
+  
+        return { message: "Thumbnail uploaded successfully!", thumbUrl };
+  
+    } catch (err) {
+        console.error("❌ Thumbnail upload error:", err);
+        throw new Error('Failed to upload thumbnail');
+    }
 };
 
 /**
