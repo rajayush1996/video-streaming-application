@@ -1,6 +1,6 @@
 const MediaMeta = require('../models/mediaMeta.model');
 const Blog = require('../models/blog.model');
-const User = require('../models/user.model');
+const UserCredentials = require('../models/userCredentials.model');
 const File = require('../models/file.model');
 const logger = require('../features/logger');
 const { ApiError } = require('../features/error');
@@ -17,7 +17,7 @@ class DashboardService {
             const [videosCount, blogsCount, usersCount] = await Promise.all([
                 MediaMeta.countDocuments({ isDeleted: false }),
                 Blog.countDocuments({ deletedAt: null }),
-                User.countDocuments({ isActive: true })
+                UserCredentials.countDocuments({ status: 'active' })
             ]);
 
             // Get total views using the new views field
@@ -47,10 +47,7 @@ class DashboardService {
      */
     async getRecentActivities(limit = 10) {
         try {
-            // For this example, we'll combine recent video and blog activity
-            // In a real application, you might have a dedicated Activity model
-            
-            // Get recent videos (without populate, since userId might be just an ID string)
+            // Get recent videos
             const recentVideos = await MediaMeta.find({ isDeleted: false })
                 .sort({ createdAt: -1 })
                 .limit(limit)
@@ -60,22 +57,23 @@ class DashboardService {
             const recentBlogs = await Blog.find({ deletedAt: null })
                 .sort({ createdAt: -1 })
                 .limit(limit)
-                .populate('admin', 'firstName lastName username email')
+                .populate('admin', 'username email')
                 .lean();
             
-            // Get all unique user IDs from videos to look them up in one query
+            
+            // Get all unique user IDs from videos
             const userIds = recentVideos
                 .filter(video => video.userId)
                 .map(video => video.userId);
             
-            // Fetch all users in one query
+            // Fetch all users in one query using string IDs
             const users = userIds.length > 0 
-                ? await User.find({ _id: { $in: userIds } })
-                    .select('firstName lastName username email')
+                ? await UserCredentials.find({ _id: { $in: userIds } })
+                    .select('username email')
                     .lean()
                 : [];
             
-            // Create a map for quick user lookup
+            // Create a map for quick user lookup using string IDs
             const userMap = {};
             users.forEach(user => {
                 userMap[user._id] = user;
@@ -84,7 +82,7 @@ class DashboardService {
             // Combine and format activities
             const combinedActivities = [
                 ...recentVideos.map(video => {
-                    // Look up user from the map
+                    // Look up user from the map using string ID
                     const user = video.userId ? userMap[video.userId] : null;
                     
                     return {
@@ -94,9 +92,7 @@ class DashboardService {
                         resourceId: video._id,
                         resourceName: video.title || 'Untitled Video',
                         user: user 
-                            ? `${user.firstName || ''} ${user.lastName || ''}`.trim() || 
-                              user.username || 
-                              user.email
+                            ? user.username || user.email
                             : 'Unknown'
                     };
                 }),
@@ -107,9 +103,7 @@ class DashboardService {
                     resourceId: blog._id,
                     resourceName: blog.title || 'Untitled Blog',
                     user: blog.admin ? 
-                        `${blog.admin.firstName || ''} ${blog.admin.lastName || ''}`.trim() || 
-                        blog.admin.username || 
-                        blog.admin.email : 
+                        blog.admin.username || blog.admin.email : 
                         'Unknown'
                 }))
             ];

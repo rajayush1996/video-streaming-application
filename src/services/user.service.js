@@ -6,22 +6,88 @@ const utils = require('../utils/utils');
 const httpStatus = require('http-status');
 const { ApiError } = require('../features/error');
 const logger = require('../features/logger');
+const UserCredentials = require('../models/userCredentials.model');
+const UserProfile = require('../models/userProfile.model');
 
 class UserService {
     /**
      * Create a new user
      * @param {Object} userData - User data
-     * @returns {Promise<User>}
+     * @returns {Promise<Object>}
      */
     async createUser(userData) {
         try {
-            const user = new User(userData);
-            await user.save();
-            return user;
+            // Create user credentials
+            const userCredentials = new UserCredentials({
+                username: userData.username,
+                email: userData.email,
+                password: userData.password,
+                role: userData.role || 'user'
+            });
+            await userCredentials.save();
+
+            // Create user profile with default values from schema
+            const userProfile = new UserProfile({
+                userId: userCredentials._id,
+                displayName: userData.displayName || userData.username,
+                bio: userData.bio || '',
+                avatar: userData.avatar || '',
+                coverImage: userData.coverImage || '',
+                location: userData.location || '',
+                socialLinks: userData.socialLinks || {},
+                preferences: {
+                    isPublic: userData.preferences?.isPublic ?? true,
+                    showEmail: userData.preferences?.showEmail ?? false,
+                    emailNotifications: userData.preferences?.emailNotifications ?? true,
+                    pushNotifications: userData.preferences?.pushNotifications ?? true,
+                    theme: userData.preferences?.theme || 'system',
+                    language: userData.preferences?.language || 'en'
+                },
+                stats: {
+                    followers: 0,
+                    following: 0,
+                    posts: 0,
+                    likes: 0,
+                    views: 0
+                }
+            });
+            await userProfile.save();
+
+            return {
+                user: {
+                    id: userCredentials._id,
+                    username: userCredentials.username,
+                    email: userCredentials.email,
+                    isVerified: userCredentials.emailVerified,
+                    role: userCredentials.role.toUpperCase(),
+                    createdAt: userCredentials.createdAt,
+                    updatedAt: userCredentials.updatedAt
+                },
+                profile: {
+                    bio: userProfile.bio,
+                    location: userProfile.location,
+                    avatar: userProfile.avatar,
+                    coverImage: userProfile.coverImage,
+                    socialLinks: userProfile.socialLinks,
+                    preferences: {
+                        isPublic: userProfile.preferences.isPublic,
+                        showEmail: userProfile.preferences.showEmail,
+                        notifications: {
+                            email: userProfile.preferences.emailNotifications,
+                            push: userProfile.preferences.pushNotifications
+                        }
+                    }
+                },
+                stats: {
+                    posts: userProfile.stats.posts,
+                    followers: userProfile.stats.followers,
+                    following: userProfile.stats.following
+                }
+            };
         } catch (error) {
             logger.error('Error creating user:', error);
             if (error.code === 11000) {
-                throw new ApiError(httpStatus.BAD_REQUEST, 'Username already exists');
+                throw new ApiError(httpStatus.BAD_REQUEST, 'Username or email already exists');
             }
             throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, 'Error creating user');
         }
@@ -30,11 +96,37 @@ class UserService {
     /**
      * Get user by username
      * @param {string} username - Username
-     * @returns {Promise<User>}
+     * @returns {Promise<Object>}
      */
     async getUserByUsername(username) {
         try {
-            return await User.findOne({ username });
+            const userCredentials = await UserCredentials.findOne({ username })
+                .select('-password -emailVerificationToken -emailVerificationExpires -resetPasswordToken -resetPasswordExpires');
+            
+            if (!userCredentials) {
+                throw new ApiError(httpStatus.NOT_FOUND, 'User not found');
+            }
+
+            const userProfile = await UserProfile.findOne({ userId: userCredentials._id });
+
+            return {
+                id: userCredentials._id,
+                username: userCredentials.username,
+                email: userCredentials.email,
+                role: userCredentials.role,
+                isEmailVerified: userCredentials.emailVerified,
+                isActive: userCredentials.isActive,
+                profile: userProfile ? {
+                    displayName: userProfile.displayName,
+                    bio: userProfile.bio,
+                    avatar: userProfile.avatar,
+                    coverImage: userProfile.coverImage,
+                    location: userProfile.location,
+                    socialLinks: userProfile.socialLinks,
+                    preferences: userProfile.preferences,
+                    stats: userProfile.stats
+                } : null
+            };
         } catch (error) {
             logger.error('Error fetching user by username:', error);
             throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, 'Error fetching user');
@@ -44,11 +136,77 @@ class UserService {
     // Retrieve a user by ID
     async getUserById(userId) {
         try {
-            const user = await User.findById(userId);
-            if (!user) {
+            // Get user credentials
+            const userCredentials = await UserCredentials.findById(userId)
+                .select('-password -emailVerificationToken -emailVerificationExpires -resetPasswordToken -resetPasswordExpires');
+            
+            if (!userCredentials) {
                 throw new ApiError(httpStatus.NOT_FOUND, 'User not found');
             }
-            return user;
+
+            // Get user profile
+            const userProfile = await UserProfile.findOne({ userId });
+
+            // Format response according to UI requirements
+            const response = {
+                user: {
+                    id: userCredentials._id,
+                    username: userCredentials.username,
+                    email: userCredentials.email,
+                    isVerified: userCredentials.emailVerified,
+                    role: userCredentials.role.toUpperCase(),
+                    createdAt: userCredentials.createdAt,
+                    updatedAt: userCredentials.updatedAt
+                },
+                profile: userProfile ? {
+                    bio: userProfile.bio || '',
+                    location: userProfile.location || '',
+                    avatar: userProfile.avatar || '',
+                    coverImage: userProfile.coverImage || '',
+                    socialLinks: {
+                        twitter: userProfile.socialLinks?.twitter || '',
+                        instagram: userProfile.socialLinks?.instagram || '',
+                        youtube: userProfile.socialLinks?.youtube || ''
+                    },
+                    preferences: {
+                        isPublic: userProfile.preferences?.isPublic,
+                        showEmail: userProfile.preferences?.showEmail,
+                        notifications: {
+                            email: userProfile.preferences?.emailNotifications,
+                            push: userProfile.preferences?.pushNotifications
+                        }
+                    }
+                } : {
+                    bio: '',
+                    location: '',
+                    avatar: '',
+                    coverImage: '',
+                    socialLinks: {
+                        twitter: '',
+                        instagram: '',
+                        youtube: ''
+                    },
+                    preferences: {
+                        isPublic: true,
+                        showEmail: false,
+                        notifications: {
+                            email: true,
+                            push: true
+                        }
+                    }
+                },
+                stats: userProfile ? {
+                    posts: userProfile.stats?.posts || 0,
+                    followers: userProfile.stats?.followers || 0,
+                    following: userProfile.stats?.following || 0
+                } : {
+                    posts: 0,
+                    followers: 0,
+                    following: 0
+                }
+            };
+
+            return response;
         } catch (error) {
             logger.error('Error fetching user:', error);
             if (error instanceof ApiError) throw error;
@@ -66,40 +224,107 @@ class UserService {
         }
     }
 
-    async getUserByEmail(email, options = {}, projection = {}) {
+    /**
+     * Get user by email
+     * @param {string} email - Email
+     * @returns {Promise<Object>}
+     */
+    async getUserByEmail(email) {
         try {
-            options.email = email;
-            options.isActive = true; // Assuming you only want to fetch active users
-            return await User.findOne(options).select(projection);
+            const userCredentials = await UserCredentials.findOne({ email })
+                .select('-password -emailVerificationToken -emailVerificationExpires -resetPasswordToken -resetPasswordExpires');
+            
+            if (!userCredentials) {
+                throw new ApiError(httpStatus.NOT_FOUND, 'User not found');
+            }
+
+            const userProfile = await UserProfile.findOne({ userId: userCredentials._id });
+
+            return {
+                id: userCredentials._id,
+                username: userCredentials.username,
+                email: userCredentials.email,
+                role: userCredentials.role,
+                isEmailVerified: userCredentials.emailVerified,
+                isActive: userCredentials.isActive,
+                profile: userProfile ? {
+                    displayName: userProfile.displayName,
+                    bio: userProfile.bio,
+                    avatar: userProfile.avatar,
+                    coverImage: userProfile.coverImage,
+                    location: userProfile.location,
+                    socialLinks: userProfile.socialLinks,
+                    preferences: userProfile.preferences,
+                    stats: userProfile.stats
+                } : null
+            };
         } catch (error) {
-            throw error;
-        } 
+            logger.error('Error fetching user by email:', error);
+            throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, 'Error fetching user');
+        }
     }
 
     /**
      * Update user by ID
      * @param {string} userId - User ID
      * @param {Object} updateData - Update data
-     * @returns {Promise<User>}
+     * @returns {Promise<Object>}
      */
     async updateUser(userId, updateData) {
         try {
-            const user = await User.findByIdAndUpdate(
-                userId,
-                { ...updateData, updatedAt: Date.now() },
-                { new: true, runValidators: true }
-            );
+            // Separate credentials and profile data
+            const { username, email, password, ...profileData } = updateData;
 
-            if (!user) {
-                throw new ApiError(httpStatus.NOT_FOUND, 'User not found');
+            // Update credentials if provided
+            if (username || email || password) {
+                const credentialsUpdate = {};
+                if (username) credentialsUpdate.username = username;
+                if (email) credentialsUpdate.email = email;
+                if (password) credentialsUpdate.password = password;
+
+                const userCredentials = await UserCredentials.findByIdAndUpdate(
+                    userId,
+                    { ...credentialsUpdate, updatedAt: Date.now() },
+                    { new: true, runValidators: true }
+                ).select('-password -emailVerificationToken -emailVerificationExpires -resetPasswordToken -resetPasswordExpires');
+
+                if (!userCredentials) {
+                    throw new ApiError(httpStatus.NOT_FOUND, 'User not found');
+                }
             }
 
-            return user;
+            // Update profile if provided
+            if (Object.keys(profileData).length > 0) {
+                // Handle nested preferences update
+                if (profileData.preferences) {
+                    const { notifications, ...otherPreferences } = profileData.preferences;
+                    if (notifications) {
+                        profileData.preferences = {
+                            ...otherPreferences,
+                            emailNotifications: notifications.email,
+                            pushNotifications: notifications.push
+                        };
+                    }
+                }
+
+                const userProfile = await UserProfile.findOneAndUpdate(
+                    { userId },
+                    { ...profileData, updatedAt: Date.now() },
+                    { new: true, upsert: true }
+                );
+
+                if (!userProfile) {
+                    throw new ApiError(httpStatus.NOT_FOUND, 'Profile not found');
+                }
+            }
+
+            // Get updated user data
+            return await this.getUserById(userId);
         } catch (error) {
             logger.error('Error updating user:', error);
             if (error instanceof ApiError) throw error;
             if (error.code === 11000) {
-                throw new ApiError(httpStatus.BAD_REQUEST, 'Username already exists');
+                throw new ApiError(httpStatus.BAD_REQUEST, 'Username or email already exists');
             }
             throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, 'Error updating user');
         }
@@ -144,8 +369,12 @@ class UserService {
      */
     async deleteUser(userId) {
         try {
-            const user = await User.findByIdAndDelete(userId);
-            if (!user) {
+            // Delete user profile
+            await UserProfile.findOneAndDelete({ userId });
+
+            // Delete user credentials
+            const userCredentials = await UserCredentials.findByIdAndDelete(userId);
+            if (!userCredentials) {
                 throw new ApiError(httpStatus.NOT_FOUND, 'User not found');
             }
         } catch (error) {
@@ -163,12 +392,51 @@ class UserService {
     async getAllUsers(options) {
         try {
             const { page = 1, limit = 10, sortBy = '-createdAt' } = options;
-            const result = await User.paginate({}, {
-                page,
-                limit,
-                sort: sortBy
+
+            // Get paginated user credentials
+            const userCredentials = await UserCredentials.paginate(
+                {},
+                {
+                    page,
+                    limit,
+                    sort: sortBy,
+                    select: '-password -emailVerificationToken -emailVerificationExpires -resetPasswordToken -resetPasswordExpires'
+                }
+            );
+
+            // Get profiles for all users
+            const userIds = userCredentials.docs.map(user => user._id);
+            const profiles = await UserProfile.find({ userId: { $in: userIds } });
+
+            // Combine credentials and profiles
+            const users = userCredentials.docs.map(user => {
+                const profile = profiles.find(p => p.userId.toString() === user._id.toString());
+                return {
+                    id: user._id,
+                    username: user.username,
+                    email: user.email,
+                    role: user.role,
+                    isEmailVerified: user.emailVerified,
+                    isActive: user.isActive,
+                    createdAt: user.createdAt,
+                    updatedAt: user.updatedAt,
+                    profile: profile ? {
+                        displayName: profile.displayName,
+                        bio: profile.bio,
+                        avatar: profile.avatar,
+                        coverImage: profile.coverImage,
+                        location: profile.location,
+                        socialLinks: profile.socialLinks,
+                        preferences: profile.preferences,
+                        stats: profile.stats
+                    } : null
+                };
             });
-            return result;
+
+            return {
+                ...userCredentials,
+                docs: users
+            };
         } catch (error) {
             logger.error('Error fetching users:', error);
             throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, 'Error fetching users');
@@ -179,15 +447,40 @@ class UserService {
         return await User.findOne({ emailVerificationToken: token, emailVerificationExpires: { $gt: new Date() } });
     }
 
+    /**
+     * Update user profile
+     * @param {string} userId - User ID
+     * @param {Object} profileData - Profile data
+     * @returns {Promise<Object>}
+     */
     async updateUserProfile(userId, profileData) {
         try {
-            const options = { 
-                new: true, 
-                select: "firstName lastName email role phoneNumber subscriptionType createdAt profileUrl isActive" 
+            const userProfile = await UserProfile.findOneAndUpdate(
+                { userId },
+                { ...profileData, updatedAt: Date.now() },
+                { new: true, upsert: true }
+            );
+
+            if (!userProfile) {
+                throw new ApiError(httpStatus.NOT_FOUND, 'Profile not found');
+            }
+
+            return {
+                id: userId,
+                profile: {
+                    displayName: userProfile.displayName,
+                    bio: userProfile.bio,
+                    avatar: userProfile.avatar,
+                    coverImage: userProfile.coverImage,
+                    location: userProfile.location,
+                    socialLinks: userProfile.socialLinks,
+                    preferences: userProfile.preferences,
+                    stats: userProfile.stats
+                }
             };
-            return await User.findByIdAndUpdate(userId, profileData, options);
         } catch (error) {
-            throw error;
+            logger.error('Error updating user profile:', error);
+            throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, 'Error updating profile');
         }
     }
 

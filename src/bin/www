@@ -5,13 +5,11 @@
  */
 
 const { connectRabbitMQ } = require('../connection/rabbitmq.connection');
-
 const app = require('../app');
-// const debug = require('debug')('vsa:server');
 const http = require('http');
 const connectDB = require('../connection/db');
 const logger = require('../features/logger');
-const redisClient = require('../connection/redis.connection');
+const socketService = require('../services/socket.service');
 
 /**
  * Get port from environment and store in Express.
@@ -25,6 +23,11 @@ app.set('port', port);
  */
 
 const server = http.createServer(app);
+
+/**
+ * Initialize socket service with server instance
+ */
+socketService.initialize(server);
 
 /**
  * Listen on provided port, on all network interfaces.
@@ -114,7 +117,7 @@ async function onListening() {
         try {
             await connectDB();
             logger.info('Database connection established successfully');
-            await connectRabbitMQ()
+            await connectRabbitMQ();
         } catch (dbErr) {
             logger.error('Database connection failed:', dbErr.message);
             process.exit(1);  // Exit if database connection fails

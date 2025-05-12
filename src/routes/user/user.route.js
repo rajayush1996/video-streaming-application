@@ -1,16 +1,16 @@
 /* eslint-disable new-cap */
 const express = require('express');
 const router = express.Router();
-const userController = require("../controllers/user.controller");
-const authenticated = require("../middlewares/auth.middleware");
-const { validate } = require('../middlewares/validation.middleware');
-const { updateProfileSchema } = require('../validations/user.validation');
-const { updateProfile } = require('../controllers/user.controller');
+const userController = require("../../controllers/user.controller");
+const auth = require("../../middlewares/auth.middleware");
+const { validate } = require('../../middlewares/validation.middleware');
+const { updateProfileSchema } = require('../../validations/user.validation');
+const profileController = require('../../controllers/profile.controller');
 
 /* GET users listing. */
 // eslint-disable-next-line no-unused-vars
-router.get('/me', authenticated, userController.getUserById);
-router.put('/me', authenticated, userController.updateUser);
+router.get('/me', auth('getUser'), userController.getUserById);
+router.put('/me', auth('updateUser'), validate(updateProfileSchema), userController.updateUser);
 
 /**
  * @swagger
@@ -51,6 +51,17 @@ router.put('/me', authenticated, userController.updateUser);
  *       404:
  *         description: User not found
  */
-router.patch('/profile', authenticated, validate(updateProfileSchema), updateProfile);
+// router.patch('/profile', auth('updateProfile'), validate(updateProfileSchema), userController.updateProfile);
+
+
+
+// Upload avatar
+router.post('/avatar', auth('updateProfile'), profileController.uploadAvatar);
+
+// Upload cover image
+router.post('/cover', auth('updateProfile'), profileController.uploadCoverImage);
+
+// Delete user
+router.delete('/:userId', auth('deleteUser'), userController.deleteUser);
 
 module.exports = router;

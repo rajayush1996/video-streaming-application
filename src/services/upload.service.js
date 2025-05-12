@@ -96,9 +96,10 @@ exports.uploadToBunnyCDN =async (filePath, fileName, options={}) =>{
  * Handle thumbnail upload
  * @param {Object} thumbnail - The thumbnail file object
  * @param {string} fileName - The filename to use
+ * @param {string} userId - The ID of the user uploading
  * @returns {Promise<Object>} - The upload result with thumbnail URL
  */
-exports.handleThumbnailUpload = async (thumbnail, fileName) => {
+exports.handleThumbnailUpload = async (thumbnail, fileName, userId = 'anonymous') => {
     try {
         // Ensure the upload directory exists
         const uploadDir = path.join(__dirname, config.cdn.local_upload_path);
@@ -118,7 +119,11 @@ exports.handleThumbnailUpload = async (thumbnail, fileName) => {
         const thumbUrl = await exports.uploadToBunnyCDN(
             thumbPath,
             `thumb_${fileName}_${uniqueDate}`, 
-            { type: 'thumbnail' }
+            { 
+                type: 'thumbnail',
+                userId,
+                originalName: fileName
+            }
         );
   
         // Clean up local temp file
@@ -138,9 +143,11 @@ exports.handleThumbnailUpload = async (thumbnail, fileName) => {
  * @param {string} fileName - The filename
  * @param {number} chunkIndex - The index of the current chunk
  * @param {number} totalChunks - Total number of chunks
+ * @param {string} userId - The ID of the user uploading
+ * @param {string} mediaType - Type of media (video/reel)
  * @returns {Promise<Object>} - The upload result
  */
-exports.processVideoChunk = async (chunk, fileName, chunkIndex, totalChunks) => {
+exports.processVideoChunk = async (chunk, fileName, chunkIndex, totalChunks, userId = 'anonymous', mediaType = 'video') => {
     const uploadDir = path.join(__dirname, config.cdn.local_upload_path);
     fileName = sanitizeFilename(fileName.replace(/\s+/g, "_")); // Sanitize filename
     
@@ -148,13 +155,19 @@ exports.processVideoChunk = async (chunk, fileName, chunkIndex, totalChunks) => 
     
     const chunkPath = path.join(uploadDir, `${fileName}.part${chunkIndex}`);
     
-    // Find or create upload progress record
-    let progress = await UploadProgress.findOne({ fileName });
+    // Find or create upload progress record with userId and mediaType
+    let progress = await UploadProgress.findOne({ 
+        fileName,
+        userId,
+        mediaType 
+    });
     
     if (!progress) {
         progress = new UploadProgress({
             fileId: Date.now().toString(),
             fileName,
+            userId,
+            mediaType,
             totalChunks,
             uploadedChunks: [],
             status: "in-progress",
@@ -177,10 +190,13 @@ exports.processVideoChunk = async (chunk, fileName, chunkIndex, totalChunks) => 
     
     // If all chunks are uploaded, merge and upload to BunnyCDN
     if (progress.uploadedChunks.length === totalChunks) {
-        return await exports.mergeAndUploadChunks(fileName, totalChunks, uploadDir);
+        return await exports.mergeAndUploadChunks(fileName, totalChunks, uploadDir, userId, mediaType);
     }
     
-    return { message: `Chunk ${chunkIndex + 1}/${totalChunks} uploaded successfully.` };
+    return { 
+        message: `Chunk ${chunkIndex + 1}/${totalChunks} uploaded successfully.`,
+        chunkFile: chunkPath
+    };
 };
 
 /**
@@ -188,9 +204,11 @@ exports.processVideoChunk = async (chunk, fileName, chunkIndex, totalChunks) => 
  * @param {string} fileName - The filename
  * @param {number} totalChunks - Total number of chunks
  * @param {string} uploadDir - The upload directory
+ * @param {string} userId - The ID of the user uploading
+ * @param {string} mediaType - Type of media (video/reel)
  * @returns {Promise<Object>} - The upload result
  */
-exports.mergeAndUploadChunks = async (fileName, totalChunks, uploadDir) => {
+exports.mergeAndUploadChunks = async (fileName, totalChunks, uploadDir, userId, mediaType) => {
     console.log(`Merging chunks for ${fileName}...`);
     
     const finalFilePath = path.join(uploadDir, fileName);
@@ -216,26 +234,91 @@ exports.mergeAndUploadChunks = async (fileName, totalChunks, uploadDir) => {
     
     // Upload the final merged file to BunnyCDN
     try {
-        console.log(" Uploading merged file to BunnyCDN...");
-        const result = await exports.uploadToBunnyCDN(finalFilePath, fileName);
+        console.log("Uploading merged file to BunnyCDN...");
+        const result = await exports.uploadToBunnyCDN(finalFilePath, fileName, {
+            userId,
+            mediaType,
+            originalName: fileName
+        });
         
         // Update progress status
         await UploadProgress.findOneAndUpdate(
-            { fileName },
+            { fileName, userId, mediaType },
             { status: "completed", url: result.url }
         );
-        
-        // Clean up the final file
-        fs.unlinkSync(finalFilePath);
         
         return { 
             message: "File uploaded successfully!", 
             url: result.url,
-            file: result.file
+            file: result.file,
+            finalFilePath
         };
     } catch (error) {
-        console.error(" Final upload failed:", error);
+        console.error("Final upload failed:", error);
         throw error;
+    }
+};
+
+/**
+ * Handle profile image upload (avatar or cover)
+ * @param {Object} file - The file object from request
+ * @param {string} type - Type of image ('avatar' or 'cover')
+ * @param {string} userId - The ID of the user uploading
+ * @returns {Promise<Object>} - The upload result with image URL
+ */
+exports.handleProfileImageUpload = async (file, type, userId) => {
+    try {
+        // Validate file type
+        const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+        if (!allowedTypes.includes(file.mimetype)) {
+            throw new Error('Invalid file type. Only images are allowed');
+        }
+
+        // Validate file size (5MB limit)
+        const maxSize = 5 * 1024 * 1024; // 5MB in bytes
+        if (file.size > maxSize) {
+            throw new Error('File size too large. Maximum size is 5MB');
+        }
+
+        // Ensure the upload directory exists
+        const uploadDir = path.join(__dirname, config.cdn.local_upload_path);
+        if (!fs.existsSync(uploadDir)) {
+            fs.mkdirSync(uploadDir, { recursive: true });
+        }
+
+        // Create unique filename
+        const timestamp = Date.now();
+        const fileName = `${type}_${userId}_${timestamp}${path.extname(file.name)}`;
+        const filePath = path.join(uploadDir, fileName);
+
+        // Save file temporarily
+        await file.mv(filePath);
+
+        // Upload to BunnyCDN
+        const result = await exports.uploadToBunnyCDN(
+            filePath,
+            fileName,
+            {
+                type: 'thumbnail', // Using thumbnail container for profile images
+                userId,
+                originalName: file.name,
+                mimeType: file.mimetype,
+                tags: [type, 'profile']
+            }
+        );
+
+        // Clean up local temp file
+        fs.unlinkSync(filePath);
+
+        return {
+            message: `${type} uploaded successfully!`,
+            url: result.url,
+            file: result.file
+        };
+
+    } catch (err) {
+        console.error(`❌ ${type} upload error:`, err);
+        throw new Error(`Failed to upload ${type}`);
     }
 };
 

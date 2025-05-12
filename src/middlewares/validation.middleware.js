@@ -1,32 +1,31 @@
-const Joi = require('joi');
-const httpStatus = require('http-status');
-const { pick } = require('../utils/utils');
-const { ApiError } = require('../features/error');
+const { BadRequestError } = require('../features/error');
 
-const validate = schema => (req, res, next) => {
-    const validSchema = pick(schema, ['params', 'query', 'body']);
-    const object = pick(req, Object.keys(validSchema));
-    const options = { stripUnknown: true };
-    const { value, error } = Joi.compile(validSchema)
-        .prefs({ errors: { label: 'path' } })
-        .validate(object, options);
+const validate = (schema) => {
+    return (req, res, next) => {
+        const validationSchema = {
+            body: schema.body || {},
+            query: schema.query || {},
+            params: schema.params || {}
+        };
 
-    if (error) {
-        const errorMessage = error.details
-            .map(details => {
-                const RegExpForArray = /^\*?body\./;
-                const RegExpForInvalid = /Invalid body./i;
-                details.message = details.message
-                    .replace(RegExpForInvalid, 'Invalid')
-                    .replace(RegExpForArray, '');
-                return details.message;
-            })
-            .join(',');
-        return next(new ApiError(httpStatus.BAD_REQUEST, errorMessage));
-    }
+        const validationResult = {
+            body: validationSchema.body.validate ? validationSchema.body.validate(req.body, { abortEarly: false, stripUnknown: true }) : { error: null },
+            query: validationSchema.query.validate ? validationSchema.query.validate(req.query, { abortEarly: false, stripUnknown: true }) : { error: null },
+            params: validationSchema.params.validate ? validationSchema.params.validate(req.params, { abortEarly: false, stripUnknown: true }) : { error: null }
+        };
 
-    Object.assign(req, value);
-    return next();
+        const errors = [];
+        if (validationResult.body.error) errors.push(...validationResult.body.error.details);
+        if (validationResult.query.error) errors.push(...validationResult.query.error.details);
+        if (validationResult.params.error) errors.push(...validationResult.params.error.details);
+
+        if (errors.length > 0) {
+            const errorMessage = errors.map((detail) => detail.message).join(', ');
+            return next(new BadRequestError(errorMessage));
+        }
+
+        next();
+    };
 };
 
-module.exports = {  validate };
+module.exports = { validate };

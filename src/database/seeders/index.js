@@ -1,4 +1,4 @@
-const { seedAdminUser } = require('./admin.seeder');
+const { seedAdminUsers } = require('./user.seeder');
 const logger = require('../../features/logger');
 
 async function runSeeders() {
@@ -6,7 +6,7 @@ async function runSeeders() {
         logger.info('Starting database seeding...');
         
         // Run admin seeder
-        await seedAdminUser();
+        await seedAdminUsers();
         
         logger.info('Database seeding completed successfully');
     } catch (error) {

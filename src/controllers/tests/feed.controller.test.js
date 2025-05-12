@@ -3,6 +3,7 @@ const httpStatus = require('http-status');
 const app = require('../../app'); // Adjust the path to your Express app
 const FeedService = require('../../services/feed.service');
 const { ApiError } = require('../../features/error');
+const { describe, it, expect, jest } = require('@jest/globals');
 
 jest.mock('../../services/feed.service');
 

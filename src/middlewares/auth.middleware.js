@@ -1,29 +1,67 @@
-const { verifyToken } = require('../utils/security.util');
+const jwt = require('jsonwebtoken');
 const config = require('../../config');
-// const fs = require('fs');
-// const configStore = require('../../config/configStore');
-// const logger = require('../features/logger');
+const UserCredentials = require('../models/userCredentials.model');
+const { UnauthorizedError } = require('../features/error');
+const logger = require('../features/logger');
 
-// const privateKeyPath = config.authentication.private_key_path;
+const authenticated = (permission) => {
+    return async (req, res, next) => {
+        try {
+            const authHeader = req.headers.authorization;
+            if (!authHeader || !authHeader.startsWith('Bearer ')) {
+                throw new UnauthorizedError('No token provided');
+            }
 
-// const secretKey = fs.readFileSync(`${privateKeyPath}`, 'utf8') || config.authentication.jwt_token_secret_key;
+            const token = authHeader.split(' ')[1];
+            const decoded = jwt.verify(token, config.authentication.jwt_token_secret_key);
+            
+            const user = await UserCredentials.findById(decoded.id);
+            if (!user) {
+                throw new UnauthorizedError('User not found');
+            }
 
-const authenticated = (req, res, next) => {
-    const authHeader = req.headers.authorization;
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-        return res.status(401).json({ message: 'Access denied' });
-    }
+            if (user.status !== 'active') {
+                throw new UnauthorizedError('User account is not active');
+            }
 
-    const token = authHeader.split(' ')[1];
+            // Check if account is locked
+            if (user.lockUntil && user.lockUntil > Date.now()) {
+                throw new UnauthorizedError('Account is locked. Please try again later');
+            }
 
-    try {
-        const tokenSecret = config.authentication.jwt_token_secret_key;
-        const decoded = verifyToken(token, tokenSecret);
-        req.user = decoded;
-        next();
-    } catch (error) {
-        return res.status(401).json({ message: 'Invalid or expired token', error });
-    }
+            // Attach user to request object
+            req.user = {
+                id: user._id,
+                username: user.username,
+                email: user.email,
+                role: user.role
+            };
+
+            // If permission is provided, check if user has the required role
+            if (permission) {
+                if (typeof permission === 'string') {
+                    // Handle string permission (e.g., 'uploadContent')
+                    if (permission === 'uploadContent' && user.role !== 'creator') {
+                        throw new UnauthorizedError('Only creators can upload content');
+                    }
+                    // Add more permission checks as needed
+                } else if (typeof permission === 'function') {
+                    // Handle function permission
+                    await permission(req, res, next);
+                    return;
+                }
+            }
+            
+            next();
+        } catch (error) {
+            logger.error('Authentication error:', error);
+            if (error.name === 'JsonWebTokenError') {
+                next(new UnauthorizedError('Invalid token'));
+            } else {
+                next(error);
+            }
+        }
+    };
 };
 
 module.exports = authenticated;

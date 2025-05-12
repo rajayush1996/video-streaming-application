@@ -5,17 +5,16 @@ const path = require('path');
 const cookieParser = require('cookie-parser');
 const logger = require('morgan');
 const helmet = require('helmet');
+
 const v1Routes = require('./routes');
 const swaggerUi = require('swagger-ui-express');
 const swaggerFile = require('./swagger_output.json');
 const cors = require('cors');
 const fileUpload = require("express-fileupload");
 const { runSeeders } = require('./database/seeders');
-
+const swaggerSpec = require('./config/swagger');
 
 // global features importing
-// const usersRouter = require('./routes/users');
-// const authRouter = require('./routes/auth.route');
 const { errorConverter, errorHandler } = require('./features/error');
 const configuration = require('../config');
 
@@ -34,6 +33,8 @@ app.use(cors({
 }));
 
 app.use(express.static(path.join(__dirname, 'public')));
+
+// Health check endpoint
 app.get('/api/v1/health', (req, res) => {
     res.status(200).json({
         status: 'success',
@@ -42,16 +43,20 @@ app.get('/api/v1/health', (req, res) => {
     });
 });
 
+// All routes are handled through the main routes index
 app.use('/api/v1', v1Routes);
 
 // Swagger documentation route
-app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerFile));
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
 // Initialize database seeders
 runSeeders().catch((error) => {
     logger.error('Error running seeders:', error);
 });
 
+// Error handling middleware
 app.use(errorConverter);
 app.use(errorHandler);
+
 module.exports = app;
+

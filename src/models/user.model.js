@@ -1,117 +1,100 @@
 const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
-const { Schema } = mongoose;
-const utils = require('../utils/utils');
-const { toJSON, paginate } = require('./plugins')
 const config = require('../../config');
 
-const auth = config.authentication;
-
-const userSchema = new Schema(
-    {
-        _id: {
-            type: String,
-        },
-        firstName: {
-            type: String,
-            trim: true,
-            maxlength: 200,
-        },
-        lastName: {
-            type: String,
-            trim: true,
-            maxlength: 200,
-        },
-        username: {
-            type: String,
-            required: true,
-            unique: true,
-            trim: true,
-            lowercase: true,
-            minlength: 3,
-            maxlength: 30,
-        },
-        phoneNumber: {
-            countryCode: {
-                type: String,
-                required: false,
-            },
-            number: {
-                type: String,
-                required: false,
-                trim: true,
-                unique: false,
-            },
-        },
-        password: {
-            type: String,
-            required: true,
-            minlength: 8,
-            private: true,
-        },
-        role: {
-            type: String,
-            enum: ['USER', 'ADMIN', 'CREATOR'],
-            default: 'USER',
-        },
-        isActive: {
-            type: Boolean,
-            default: true,
-        },
-        deletedAt: {
-            type: Date,
-            default: null,
-        },
-        createdAt: {
-            type: Date,
-            default: Date.now,
-        },
-        updatedAt: {
-            type: Date,
-            default: Date.now,
-        },
+const userSchema = new mongoose.Schema({
+    username: {
+        type: String,
+        required: true,
+        unique: true,
+        trim: true,
+        minlength: 3,
+        maxlength: 30
     },
-    {
-        timestamps: true,
+    email: {
+        type: String,
+        required: true,
+        unique: true,
+        trim: true,
+        lowercase: true
+    },
+    password: {
+        type: String,
+        required: true,
+        minlength: 6
+    },
+    role: {
+        type: String,
+        enum: ['user', 'admin'],
+        default: 'user'
+    },
+    status: {
+        type: String,
+        enum: ['active', 'suspended', 'banned'],
+        default: 'active'
+    },
+    avatar: {
+        type: String,
+        default: ''
+    },
+    coverImage: {
+        type: String,
+        default: ''
+    },
+    bio: {
+        type: String,
+        maxlength: 500,
+        default: ''
+    },
+    location: {
+        type: String,
+        default: ''
+    },
+    socialLinks: {
+        twitter: String,
+        instagram: String,
+        youtube: String
+    },
+    stats: {
+        followers: {
+            type: Number,
+            default: 0
+        },
+        following: {
+            type: Number,
+            default: 0
+        },
+        posts: {
+            type: Number,
+            default: 0
+        },
+        likes: {
+            type: Number,
+            default: 0
+        }
     }
-);
-
-// Add plugins
-userSchema.plugin(toJSON);
-userSchema.plugin(paginate);
-
-// Pre-save hook to hash password before saving user
-userSchema.pre('validate', async function (next) {
-    const user = this;
-    console.log("🚀 ~ user:", user);
-
-    // Generate UUID if _id is not present
-    if (!user._id) {
-        user._id = await utils.uuid('u-');
-    }
-
-    // Hash password if it has been modified or is new
-    if (user.isModified('password')) {
-        const saltRounds = auth.salt_rounds;
-        user.password = await bcrypt.hash(user.password, saltRounds);
-    }
-
-    next();
+}, {
+    timestamps: true
 });
 
-/**
- * Method to compare input password with hashed password
- * @param {string} password
- * @returns {Promise<boolean>}
- */
-userSchema.methods.isPasswordMatch = async function (password) {
-    const user = this;
-    return bcrypt.compare(password, user.password);
+// Hash password before saving
+userSchema.pre('save', async function(next) {
+    if (!this.isModified('password')) return next();
+    
+    try {
+        const salt = await bcrypt.genSalt(config.authentication.salt_rounds);
+        this.password = await bcrypt.hash(this.password, salt);
+        next();
+    } catch (error) {
+        next(error);
+    }
+});
+
+// Method to compare password
+userSchema.methods.comparePassword = async function(candidatePassword) {
+    return bcrypt.compare(candidatePassword, this.password);
 };
 
-/**
- * @typedef User
- */
 const User = mongoose.model('User', userSchema);
 
 module.exports = User;

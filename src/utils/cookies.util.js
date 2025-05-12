@@ -1,7 +1,7 @@
 // cookies.util.js
 
 const REFRESH_TOKEN_COOKIE_NAME = 'refreshToken';
-
+const { authentication } = require('../../config');
 
 const DEFAULT_COOKIE_OPTIONS = {
     httpOnly: true,
@@ -41,16 +41,32 @@ const clearCookie = (res, name) => {
 };
 
 /**
- * Set a secure HTTP-only refresh token cookie
+ * Sets the refresh token in an HTTP-only cookie
  * @param {Object} res - Express response object
- * @param {string} token - JWT refresh token
+ * @param {string} token - Refresh token to set
  */
 const setRefreshTokenCookie = (res, token) => {
-    res.cookie(REFRESH_TOKEN_COOKIE_NAME, token, {
+    // Convert refresh_token_expiration (e.g., "30d") to milliseconds
+    const expiresIn = authentication.refresh_token_expiration;
+    let maxAge;
+    
+    if (expiresIn.endsWith('d')) {
+        maxAge = parseInt(expiresIn) * 24 * 60 * 60 * 1000; // Convert days to milliseconds
+    } else if (expiresIn.endsWith('h')) {
+        maxAge = parseInt(expiresIn) * 60 * 60 * 1000; // Convert hours to milliseconds
+    } else if (expiresIn.endsWith('m')) {
+        maxAge = parseInt(expiresIn) * 60 * 1000; // Convert minutes to milliseconds
+    } else if (expiresIn.endsWith('s')) {
+        maxAge = parseInt(expiresIn) * 1000; // Convert seconds to milliseconds
+    } else {
+        maxAge = 30 * 24 * 60 * 60 * 1000; // Default to 30 days if format is unknown
+    }
+
+    res.cookie('refreshToken', token, {
         httpOnly: true,
-        secure: true, // use true in production with HTTPS
-        sameSite: 'None', // required for cross-domain
-        maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'strict',
+        maxAge
     });
 };
 
@@ -64,14 +80,14 @@ const getRefreshTokenFromCookie = (req) => {
 };
 
 /**
- * Clear the refresh token cookie (logout)
+ * Clears the refresh token cookie
  * @param {Object} res - Express response object
  */
 const clearRefreshTokenCookie = (res) => {
-    res.clearCookie(REFRESH_TOKEN_COOKIE_NAME, {
+    res.clearCookie('refreshToken', {
         httpOnly: true,
-        secure: true,
-        sameSite: 'None',
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'strict'
     });
 };
 

@@ -3,32 +3,57 @@ const utils = require('../utils');
 const { toJSON, paginate } = require('./plugins');
 
 const mediaMetadataSchema = new mongoose.Schema({
+    _id: {
+        type: mongoose.Schema.Types.ObjectId || String,
+    },
     thumbnailId: { type: String, required: true, unique: true },
-    mediaFileId:  { type: String, required: true, unique: true },
+    mediaFileId: { type: String, required: true, unique: true },
     title: { type: String },
     description: { type: String },
     category: { type: String },
     mediaType: { type: String, enum: ['video', 'reel', 'thumbnail'], default: 'video' },
-    userId: { type: String, ref: 'User' },
+    userId: { type: String, ref: 'UserCredentials' },
     views: { type: Number, default: 0 },
-    status: { type: String, enum: ['pending', 'approved', 'rejected'], default: 'pending' },
+    status: { 
+        type: String, 
+        enum: ['pending', 'approved', 'rejected'], 
+        default: 'pending' 
+    },
+    rejectionReason: {
+        type: String,
+        maxlength: 500
+    },
+    reviewedBy: {
+        type: String,
+        ref: 'UserCredentials'
+    },
+    reviewedAt: {
+        type: Date
+    },
     isDeleted: { type: Boolean, default: false },
-    deletedAt: { type: Date },
-}, { timestamps: true });
+    deletedAt: { type: Date }
+}, {
+    timestamps: true,
+    _id: false
+});
 
 mediaMetadataSchema.plugin(toJSON);
 mediaMetadataSchema.plugin(paginate);
 
-// Pre-save hook to hash password before saving user
-mediaMetadataSchema.pre('validate', async function (next) {
-    const media = this;
-
-    // Generate UUID if _id is not present
-    if (!media._id) {
-        media._id = utils.uuid('me-');
+// Generate UUID with prefix before saving
+mediaMetadataSchema.pre('validate', async function(next) {
+    if (!this._id) {
+        this._id = utils.uuid('me-');
     }
-
     next();
 });
 
-module.exports = mongoose.model('mediaMetadata', mediaMetadataSchema);
+// Indexes
+mediaMetadataSchema.index({ userId: 1 });
+mediaMetadataSchema.index({ status: 1 });
+mediaMetadataSchema.index({ mediaType: 1 });
+mediaMetadataSchema.index({ createdAt: -1 });
+
+
+const MediaMeta = mongoose.model('mediaMetadata', mediaMetadataSchema);
+module.exports = MediaMeta;

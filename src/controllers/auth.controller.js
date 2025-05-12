@@ -1,168 +1,165 @@
-const AuthService = require('../services/auth.service');
 const logger = require('../features/logger');
 const { getRefreshTokenFromCookie } = require('../utils/cookies.util');
-const { userService } = require('../services');
 const { authService } = require('../services');
 const httpStatus = require('http-status');
-const { ApiError } = require('../features/error');
+const { responseHandler, ApiError } = require('../features/error');
 
-async function verifyOtpUser(req, res, next) {
+// Helper function to clean ANSI color codes from error messages
+const cleanErrorMessage = (message) => {
+    return message.replace(/\u001b\[\d+m/g, '').trim();
+};
+
+const signUp = async (req, res) => {
     try {
-        const { body } = req;
-        const result = await AuthService.verifyOtpUser(body);
-        return res.status(httpStatus.OK).json(result);
-    } catch (err) {
-        logger.error(err);
-        next(err);
-    }
-}
-
-async function sendOtpUser(req, res, next) {
-    try {
-        const { body } = req;
-        const result = await AuthService.sendOtpToEmail(body);
-        if (result) {
-            return res.status(httpStatus.OK).json({ message: 'otp send successfully!' });
-        }
-
-        return res.status(httpStatus.FORBIDDEN).json({ status: false });
-    } catch (err) {
-        logger.error('Error in controller', err);
-        next(err);
-    }
-}
-
-async function signUp(req, res, next) {
-    try {
-        const { body } = req;
-        const result = await AuthService.signUpUser(body);
-        return res.status(httpStatus.CREATED).json(result);
-    } catch(err) {
-        logger.error('Error in signUp', err);
-        next(err);
-    }
-}
-
-/**
- * @swagger
- * /api/v1/auth/signin:
- *   post:
- *     summary: Sign in with username/email and password
- *     tags: [Auth]
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             required:
- *               - identifier
- *               - password
- *             properties:
- *               identifier:
- *                 type: string
- *                 description: Username or email for login
- *                 minLength: 3
- *                 maxLength: 100
- *               password:
- *                 type: string
- *                 minLength: 8
- *     responses:
- *       200:
- *         description: User logged in successfully
- *       401:
- *         description: Invalid credentials
- *       404:
- *         description: User not found
- */
-const signIn = async (req, res, next) => {
-    try {
-        const { identifier, password } = req.body;
-        
-        // Try to find user by username or email
-        const user = await userService.getUserByIdentifier(identifier);
-        if (!user) {
-            throw new ApiError(httpStatus.NOT_FOUND, 'User not found');
-        }
-
-        // Check if user is active
-        if (!user.isActive) {
-            throw new ApiError(httpStatus.FORBIDDEN, 'User account is inactive');
-        }
-
-        // Validate password using the User model's method
-        const isPasswordValid = await user.isPasswordMatch(password);
-        if (!isPasswordValid) {
-            throw new ApiError(httpStatus.UNAUTHORIZED, 'Invalid credentials');
-        }
-
-        // Generate auth token
-        const token = authService.generateAuthTokens(user);
-        
-        // Create a safe user object without sensitive data
-        const safeUser = {
-            id: user._id,
-            firstName: user.firstName,
-            lastName: user.lastName,
-            username: user.username,
-            email: user.email,
-            role: user.role,
-            isActive: user.isActive,
-            createdAt: user.createdAt,
-            updatedAt: user.updatedAt
-        };
-        
-        res.status(httpStatus.OK).json({
-            message: "User logged in successfully",
-            data: {
-                user: safeUser,
-                token
-            }
-        });
+        const result = await authService.signUpUser(req.body);
+        responseHandler(res, httpStatus.CREATED, 'User registered successfully', result);
     } catch (error) {
-        logger.error('Error in signIn:', error);
-        next(error);
+        logger.error('Error in signUp:', error);
+        throw new ApiError(error.statusCode || httpStatus.INTERNAL_SERVER_ERROR, cleanErrorMessage(error.message));
     }
 };
 
-async function verifyEmail(req, res, next) {
+const userSignIn = async (req, res, next) => {
     try {
-        const { token } = req.body;
-        const result = await AuthService.verifyEmail(token);
-        return res.status(httpStatus.OK).json(result);
-    } catch(err) {
-        logger.error('Error in verifying email', err.message);
-        next(err);
+        const result = await authService.userSignIn(req.body, res);
+        responseHandler(res, httpStatus.OK, 'Login successful', {
+            user: result.user,
+            accessToken: result.accessToken
+        });
+    } catch (error) {
+        logger.error('Error in userSignIn:', error);
+        if (error.isEmailNotVerified) {
+            next(new ApiError(httpStatus.FORBIDDEN, cleanErrorMessage(error.message), {
+                email: req.body.email,
+                needsVerification: true,
+                isEmailNotVerified: true,
+                resendVerificationEndpoint: '/api/auth/resend-verification'
+            }));
+        } else if (error.isAccountLocked) {
+            next(new ApiError(httpStatus.FORBIDDEN, cleanErrorMessage(error.message), {
+                isAccountLocked: true,
+                lockUntil: error.lockUntil
+            }));
+        } else {
+            next(new ApiError(error.statusCode || httpStatus.INTERNAL_SERVER_ERROR, cleanErrorMessage(error.message), {
+                isLoginError: true
+            }));
+        }
     }
-}
+};
 
-async function resendVerificationEmail(req, res, next) {
+const adminSignIn = async (req, res, next) => {
     try {
-        const response =  await AuthService.resendVerificationEmail(req.body); 
-        return res.status(httpStatus.OK).json(response);
-    } catch(err) {
-        logger.error('Error in resending verification email', err.message);
-        next(err);
+        const result = await authService.adminSignIn(req.body, res);
+        responseHandler(res, httpStatus.OK, 'Login successful', {
+            admin: result.admin,
+            accessToken: result.accessToken
+        });
+    } catch (error) {
+        logger.error('Error in adminSignIn:', error);
+        next(new ApiError(error.statusCode || httpStatus.INTERNAL_SERVER_ERROR, cleanErrorMessage(error.message)));
     }
-}
+};
 
-async function verifyRefreshToken(req, res, next){
+const verifyEmail = async (req, res, next) => {
+    try {
+        const result = await authService.verifyEmail(req.query.token);
+        responseHandler(res, httpStatus.OK, 'Email verified successfully', result);
+    } catch (error) {
+        logger.error('Error in verifyEmail:', error);
+        return next(
+            error instanceof ApiError
+                ? error
+                : new ApiError(error.statusCode || httpStatus.INTERNAL_SERVER_ERROR, error.message)
+        );
+    }
+};
+
+const verifyOtpUser = async (req, res, next) => {
+    try {
+        const result = await authService.verifyOtpUser(req.body);
+        responseHandler(res, httpStatus.OK, 'OTP verified successfully', result);
+    } catch (error) {
+        logger.error('Error in verifyOtpUser:', error);
+        next(new ApiError(error.statusCode || httpStatus.INTERNAL_SERVER_ERROR, cleanErrorMessage(error.message)));
+    }
+};
+
+const sendOtpToEmail = async (req, res, next) => {
+    try {
+        const result = await authService.sendOtpToEmail(req.body);
+        responseHandler(res, httpStatus.OK, 'OTP sent successfully', result);
+    } catch (error) {
+        logger.error('Error in sendOtpToEmail:', error);
+        next(new ApiError(error.statusCode || httpStatus.INTERNAL_SERVER_ERROR, cleanErrorMessage(error.message)));
+    }
+};
+
+const resendVerificationEmail = async (req, res, next) => {
+    try {
+        const result = await authService.resendVerificationEmail(req.body);
+        responseHandler(res, httpStatus.OK, 'Verification email sent successfully', result);
+    } catch (error) {
+        logger.error('Error in resendVerificationEmail:', error);
+        next(new ApiError(error.statusCode || httpStatus.INTERNAL_SERVER_ERROR, cleanErrorMessage(error.message)));
+    }
+};
+
+const verifyRefreshToken = async (req, res, next) => {
     try {
         const refreshToken = getRefreshTokenFromCookie(req);
-        const accessToken =  AuthService.generateAccessToken(refreshToken);
-        return res.status(httpStatus.OK).json({ accessToken });
-    } catch (err) {
-        console.error('Failed to generate access token:', err);
-        next(err);
+        if (!refreshToken) {
+            next(new ApiError(httpStatus.UNAUTHORIZED, 'No refresh token found in cookies'));
+        }
+
+        const result = await authService.verifyRefreshToken(refreshToken);
+        responseHandler(res, httpStatus.OK, 'Token refreshed successfully', result);
+    } catch (error) {
+        logger.error('Error in verifyRefreshToken:', error);
+        next(new ApiError(error.statusCode || httpStatus.INTERNAL_SERVER_ERROR, cleanErrorMessage(error.message)));
     }
-}
+};
+
+const requestPasswordReset = async (req, res, next) => {
+    try {
+        const result = await authService.requestPasswordReset(req.body.email);
+        responseHandler(res, httpStatus.OK, 'Password reset link sent successfully', result);
+    } catch (error) {
+        logger.error('Error in requestPasswordReset:', error);
+        next(new ApiError(error.statusCode || httpStatus.INTERNAL_SERVER_ERROR, cleanErrorMessage(error.message)));
+    }
+};
+
+const verifyResetToken = async (req, res, next) => {
+    try {
+        const result = await authService.verifyResetToken(req.query.token);
+        responseHandler(res, httpStatus.OK, 'Reset token is valid', result);
+    } catch (error) {
+        logger.error('Error in verifyResetToken:', error);
+        next(new ApiError(error.statusCode || httpStatus.INTERNAL_SERVER_ERROR, cleanErrorMessage(error.message)));
+    }
+};
+
+const resetPassword = async (req, res, next) => {
+    try {
+        const result = await authService.resetPassword(req.body);
+        responseHandler(res, httpStatus.OK, 'Password reset successful', result);
+    } catch (error) {
+        logger.error('Error in resetPassword:', error);
+        next(new ApiError(error.statusCode || httpStatus.INTERNAL_SERVER_ERROR, cleanErrorMessage(error.message)));
+    }
+};
 
 module.exports = {
-    verifyOtpUser,
-    sendOtpUser,
     signUp,
-    signIn,
+    userSignIn,
+    adminSignIn,
     verifyEmail,
+    verifyOtpUser,
+    sendOtpToEmail,
     resendVerificationEmail,
-    verifyRefreshToken
+    verifyRefreshToken,
+    requestPasswordReset,
+    verifyResetToken,
+    resetPassword
 };

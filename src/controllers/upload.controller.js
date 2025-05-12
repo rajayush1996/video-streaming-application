@@ -1,6 +1,7 @@
 const uploadProgressModel = require("../models/uploadProgress.model");
 const uploadService = require("../services/upload.service");
 const { handleThumbnailUpload, processVideoChunk } = uploadService;
+const fs = require('fs');
 
 const uploadVideo = async (req, res) => {
     try {
@@ -14,7 +15,8 @@ const uploadVideo = async (req, res) => {
                 return res.status(400).json({ error: "No thumbnail file provided" });
             }
   
-            const result = await handleThumbnailUpload(req.files.thumbnail, fileName);
+            const userId = req.user?.id || 'anonymous';
+            const result = await handleThumbnailUpload(req.files.thumbnail, fileName, userId);
             return res.json(result);
         }
 
@@ -25,7 +27,26 @@ const uploadVideo = async (req, res) => {
         chunkIndex = parseInt(chunkIndex);
         totalChunks = parseInt(totalChunks);
         
-        const result = await processVideoChunk(req.files.chunk, fileName, chunkIndex, totalChunks);
+        const userId = req.user?.id || 'anonymous';
+        
+        const result = await processVideoChunk(
+            req.files.chunk,
+            fileName,
+            chunkIndex,
+            totalChunks,
+            userId,
+            'video' // Explicitly set media type for video uploads
+        );
+
+        // Clean up chunks after merging if they exist
+        if (result.chunkFile && fs.existsSync(result.chunkFile)) {
+            fs.unlinkSync(result.chunkFile);
+        }
+        // Clean up final file after upload if it exists
+        if (result.finalFilePath && fs.existsSync(result.finalFilePath)) {
+            fs.unlinkSync(result.finalFilePath);
+        }
+
         return res.json(result);
     } catch (error) {
         console.error("❌ Upload error:", error);
@@ -106,14 +127,14 @@ const uploadReel = async (req, res) => {
   
         let { fileName, chunkIndex, totalChunks, isThumbnail } = req.body;
   
-        // ✅ Thumbnail Upload
+        // Thumbnail Upload
         if (isThumbnail === 'true') {
             if (!req.files || !req.files.thumbnail) {
                 return res.status(400).json({ error: "No thumbnail file provided" });
             }
   
             const userId = req.user?.id || 'anonymous'; // fallback if auth isn't mandatory
-            const result = await uploadService.handleThumbnailUpload(req.files.thumbnail, userId);
+            const result = await uploadService.handleThumbnailUpload(req.files.thumbnail, fileName, userId);
             return res.json(result);
         }
   
@@ -135,6 +156,11 @@ const uploadReel = async (req, res) => {
             userId,
             'reel' // ✅ Default media type
         );
+  
+        // Clean up chunks after merging
+        fs.unlinkSync(result.chunkFile);
+        // Clean up final file after upload
+        fs.unlinkSync(result.finalFilePath);
   
         return res.json(result);
     } catch (error) {

@@ -7,7 +7,7 @@ const blogSchema = new mongoose.Schema(
     {
         title: { type: String, required: true, trim: true, maxlength: 200 },
         content: { type: String, required: true },
-        admin: { type: String, ref: "User", required: true }, // Admin who created/approved the blog
+        admin: { type: String, ref: "UserCredentials", required: true }, // Admin who created/approved the blog
         category: { 
             type: String, 
             required: true,

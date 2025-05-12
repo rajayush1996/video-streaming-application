@@ -21,20 +21,8 @@ const getUserById = async (req, res, next) => {
         const user = await UserService.getUserById(userId);
         
         if (user) {
-            // Create a safe user object without sensitive data
-            const safeUser = {
-                id: user._id,
-                firstName: user.firstName,
-                lastName: user.lastName,
-                username: user.username,
-                email: user.email,
-                role: user.role,
-                isActive: user.isActive,
-                createdAt: user.createdAt,
-                updatedAt: user.updatedAt
-            };
-            
-            responseHandler(res, httpStatus.OK, 'User details retrieved successfully', safeUser);
+            // Create a safe user object without sensitive data            
+            responseHandler(res, httpStatus.OK, 'User details retrieved successfully', user);
         } else {
             res.status(httpStatus.NOT_FOUND).json({ message: 'User details not found' });
         }

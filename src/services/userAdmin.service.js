@@ -1,4 +1,4 @@
-const User = require("../models/user.model");
+const UserCredentials = require("../models/userCredentials.model");
 const httpStatus = require("http-status");
 const { ApiError } = require("../features/error");
 const logger = require("../features/logger");
@@ -24,39 +24,123 @@ class UserAdminService {
             // Merge with provided options
             const queryOptions = { ...defaultOptions, ...options };
 
-            // By default, exclude deleted users unless specifically requested
-            if (!includeDeleted) {
-                filter.deletedAt = null;
-            }
+            // Build the aggregation pipeline
+            const pipeline = [
+                // Match stage for filtering
+                {
+                    $match: {
+                        ...filter,
+                        ...(includeDeleted ? {} : { deletedAt: null })
+                    }
+                },
 
-            // Handle search query (search by name or email)
-            if (searchQuery) {
-                const searchRegex = new RegExp(searchQuery, "i");
-                filter.$or = [
-                    { firstName: searchRegex },
-                    { lastName: searchRegex },
-                    { username: searchRegex },
-                    { "phoneNumber.number": searchRegex }
-                ];
-            }
+                // Lookup user profile data
+                {
+                    $lookup: {
+                        from: 'userprofiles',
+                        localField: '_id',
+                        foreignField: 'userId',
+                        as: 'profile'
+                    }
+                },
 
-            // Exclude password field from results
-            queryOptions.select = '-password';
+                // Unwind the profile array
+                {
+                    $unwind: {
+                        path: '$profile',
+                        preserveNullAndEmptyArrays: true
+                    }
+                },
 
-            // Use the paginate plugin
-            let result = await User.paginate(filter, queryOptions);
+                // Handle search query
+                ...(searchQuery ? [{
+                    $match: {
+                        $or: [
+                            { username: { $regex: searchQuery, $options: 'i' } },
+                            { email: { $regex: searchQuery, $options: 'i' } },
+                            { 'profile.firstName': { $regex: searchQuery, $options: 'i' } },
+                            { 'profile.lastName': { $regex: searchQuery, $options: 'i' } },
+                            { 'profile.phoneNumber': { $regex: searchQuery, $options: 'i' } }
+                        ]
+                    }
+                }] : []),
 
-            // Double-check to ensure passwords are removed from all results
-            if (result.results) {
-                // Map each result to remove password field
-                result.results = result.results.map(user => {
-                    const userObj = user.toObject ? user.toObject() : { ...user };
-                    delete userObj.password;
-                    return userObj;
-                });
-            }
+                // Project only the fields we want to return
+                {
+                    $project: {
+                        _id: 1,
+                        username: 1,
+                        email: 1,
+                        role: 1,
+                        status: 1,
+                        createdAt: 1,
+                        updatedAt: 1,
+                        lastLoginAt: 1,
+                        'profile.firstName': 1,
+                        'profile.lastName': 1,
+                        'profile.phoneNumber': 1,
+                        'profile.address': 1,
+                        'profile.bio': 1,
+                        'profile.avatar': 1,
+                        'profile.socialLinks': 1,
+                        'profile.preferences': 1,
+                        'profile.displayName': 1,
+                        'profile.coverImage': 1,
+                    }
+                },
 
-            return result;
+                // Sort stage
+                {
+                    $sort: {
+                        [queryOptions.sortBy.split(':')[0]]: 
+                            queryOptions.sortBy.split(':')[1] === 'desc' ? -1 : 1
+                    }
+                }
+            ];
+
+            // Execute the aggregation with pagination
+            const skip = (queryOptions.page - 1) * queryOptions.limit;
+            const [results, total] = await Promise.all([
+                UserCredentials.aggregate([
+                    ...pipeline,
+                    { $skip: skip },
+                    { $limit: queryOptions.limit }
+                ]),
+                UserCredentials.aggregate([
+                    ...pipeline,
+                    { $count: 'total' }
+                ])
+            ]);
+
+            // Format the results
+            const formattedResults = results.map(user => ({
+                id: user._id,
+                username: user.username,
+                email: user.email,
+                role: user.role,
+                status: user.status,
+                firstName: user.profile?.firstName,
+                lastName: user.profile?.lastName,
+                phoneNumber: user.profile?.phoneNumber,
+                address: user.profile?.address,
+                bio: user.profile?.bio,
+                avatar: user.profile?.avatar,
+                socialLinks: user.profile?.socialLinks,
+                preferences: user.profile?.preferences,
+                createdAt: user.createdAt,
+                updatedAt: user.updatedAt,
+                lastLoginAt: user.lastLoginAt,
+                name: user.profile?.displayName,
+                coverImage: user.profile?.coverImage
+            }));
+
+            return {
+                results: formattedResults,
+                page: queryOptions.page,
+                limit: queryOptions.limit,
+                totalPages: Math.ceil((total[0]?.total || 0) / queryOptions.limit),
+                totalResults: total[0]?.total || 0
+            };
         } catch (error) {
             logger.error("Error getting users:", error);
             throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, "Error fetching users");
@@ -64,19 +148,83 @@ class UserAdminService {
     }
 
     /**
-     * Get user by ID
+     * Get user by ID with combined data from UserCredentials and UserProfile
      * @param {string} userId - User ID
-     * @returns {Promise<Object>} User object
+     * @returns {Promise<Object>} Combined user data
      */
     async getUserById(userId) {
         try {
-            const user = await User.findById(userId).select('-password');
-            
-            if (!user) {
+            const user = await UserCredentials.aggregate([
+                // Match the user by ID
+                { $match: { _id: userId } },
+                
+                // Lookup user profile data
+                {
+                    $lookup: {
+                        from: 'userprofiles',
+                        localField: '_id',
+                        foreignField: 'userId',
+                        as: 'profile'
+                    }
+                },
+                
+                // Unwind the profile array (since lookup returns an array)
+                { $unwind: { path: '$profile', preserveNullAndEmptyArrays: true } },
+                
+                // Project only the fields we want to return
+                {
+                    $project: {
+                        _id: 1,
+                        username: 1,
+                        email: 1,
+                        role: 1,
+                        status: 1,
+                        createdAt: 1,
+                        updatedAt: 1,
+                        lastLoginAt: 1,
+                        'profile.firstName': 1,
+                        'profile.lastName': 1,
+                        'profile.phoneNumber': 1,
+                        'profile.address': 1,
+                        'profile.bio': 1,
+                        'profile.avatar': 1,
+                        'profile.socialLinks': 1,
+                        'profile.preferences': 1
+                    }
+                }
+            ]);
+
+            if (!user || user.length === 0) {
                 throw new ApiError(httpStatus.NOT_FOUND, "User not found");
             }
 
-            return user;
+            // Combine the data into a single object
+            const userData = {
+                ...user[0],
+                profile: user[0].profile || {}
+            };
+
+            // Remove the nested profile object and flatten the structure
+            const flattenedUser = {
+                id: userData._id,
+                username: userData.username,
+                email: userData.email,
+                role: userData.role,
+                status: userData.status,
+                firstName: userData.profile.firstName,
+                lastName: userData.profile.lastName,
+                phoneNumber: userData.profile.phoneNumber,
+                address: userData.profile.address,
+                bio: userData.profile.bio,
+                avatar: userData.profile.avatar,
+                socialLinks: userData.profile.socialLinks,
+                preferences: userData.profile.preferences,
+                createdAt: userData.createdAt,
+                updatedAt: userData.updatedAt,
+                lastLoginAt: userData.lastLoginAt
+            };
+
+            return flattenedUser;
         } catch (error) {
             logger.error(`Error getting user by ID ${userId}:`, error);
             if (error instanceof ApiError) throw error;
@@ -93,7 +241,7 @@ class UserAdminService {
     async updateUser(userId, updateData) {
         try {
             // Find the user first
-            const user = await User.findById(userId);
+            const user = await UserCredentials.findById(userId);
             
             if (!user) {
                 throw new ApiError(httpStatus.NOT_FOUND, "User not found");
@@ -131,16 +279,18 @@ class UserAdminService {
      */
     async changeUserStatus(userId, status) {
         try {
-            // Map status string to isActive boolean
+            // Map status string to status field
             let updateData = {};
             
             switch (status.toLowerCase()) {
             case 'active':
-                updateData.isActive = true;
+                updateData.status = 'active';
                 break;
             case 'inactive':
+                updateData.status = 'inactive';
+                break;
             case 'suspended':
-                updateData.isActive = false;
+                updateData.status = 'suspended';
                 break;
             default:
                 throw new ApiError(httpStatus.BAD_REQUEST, "Invalid status specified");
@@ -166,7 +316,7 @@ class UserAdminService {
     async deleteUser(userId) {
         try {
             // First find the user to check if they're an admin
-            const user = await User.findById(userId);
+            const user = await UserCredentials.findById(userId);
             
             if (!user) {
                 throw new ApiError(httpStatus.NOT_FOUND, "User not found");
@@ -180,15 +330,15 @@ class UserAdminService {
                 );
             }
 
-            // Soft delete by deactivating user and marking as deleted
-            user.isActive = false;
+            // Soft delete by updating status and adding deletedAt
+            user.status = 'inactive';
             user.deletedAt = new Date();
             await user.save();
 
             return { 
                 message: "User deleted successfully", 
                 userId,
-                isActive: false,
+                status: user.status,
                 deletedAt: user.deletedAt
             };
         } catch (error) {
@@ -206,7 +356,7 @@ class UserAdminService {
     async createUser(userData) {
         try {
             // Create new user
-            const user = await User.create(userData);
+            const user = await UserCredentials.create(userData);
             
             // Return user without password
             const userObject = user.toObject();

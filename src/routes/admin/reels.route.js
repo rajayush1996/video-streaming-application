@@ -1,11 +1,14 @@
 const express = require('express');
-const reelsController = require('../controllers/reels.controller');
-const reelsUploadController = require('../controllers/upload.controller');
-const { validate } = require('../middlewares/validation.middleware');
-const authenticated = require('../middlewares/auth.middleware');
-const reelsValidation = require('../validations/reels.validation');
+const reelsController = require('../../controllers/reels.controller');
+const reelsUploadController = require('../../controllers/upload.controller');
+const { validate } = require('../../middlewares/validation.middleware');
+const auth = require('../../middlewares/auth.middleware');
+const reelsValidation = require('../../validations/reels.validation');
 
 const router = express.Router();
+
+// Apply admin authentication to all routes
+router.use(auth('admin'));
 
 /**
  * @route GET /api/v1/reels
@@ -36,7 +39,6 @@ router.get(
  */
 router.patch(
     '/:id', 
-    authenticated, 
     validate(reelsValidation.updateReelSchema), 
     reelsController.updateReel
 );
@@ -48,7 +50,6 @@ router.patch(
  */
 router.delete(
     '/:id', 
-    authenticated, 
     validate(reelsValidation.deleteReelSchema), 
     reelsController.softDeleteReel
 );
@@ -71,7 +72,6 @@ router.put(
  */
 router.post(
     '/upload',
-    authenticated,
     reelsUploadController.uploadReel
 );
 

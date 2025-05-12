@@ -1,5 +1,4 @@
-const httpStatus = require('http-status');
-const logger = require('../features/logger');
+const { ForbiddenError } = require('../features/error');
 
 /**
  * Middleware to ensure only admin users can access certain routes
@@ -8,33 +7,15 @@ const logger = require('../features/logger');
  * @param {Function} next - Express next middleware function
  */
 const adminOnly = (req, res, next) => {
-    try {
-        if (!req.user) {
-            logger.warn('Unauthorized access attempt: No user in request');
-            return res.status(httpStatus.UNAUTHORIZED).json({
-                success: false,
-                message: 'You must be logged in'
-            });
-        }
-
-        // Check if user has admin role
-        if (req.user.role !== 'ADMIN') {
-            logger.warn(`Forbidden access attempt: User ${req.user.id} with role ${req.user.role} tried to access admin-only resource`);
-            return res.status(httpStatus.FORBIDDEN).json({
-                success: false,
-                message: 'Access denied. Admin privileges required.'
-            });
-        }
-
-        // User is admin, proceed
-        next();
-    } catch (error) {
-        logger.error('Error in admin middleware:', error);
-        return res.status(httpStatus.INTERNAL_SERVER_ERROR).json({
-            success: false,
-            message: 'Internal server error'
-        });
+    if (!req.user) {
+        return next(new ForbiddenError('Authentication required'));
     }
+
+    if (req.user.role !== 'admin') {
+        return next(new ForbiddenError('Admin access required'));
+    }
+
+    next();
 };
 
 module.exports = adminOnly; 

@@ -1,6 +1,21 @@
 const userAdminService = require("../services/userAdmin.service");
 const httpStatus = require("http-status");
 const logger = require("../features/logger");
+const { responseHandler } = require("../features/error");
+
+/**
+ * Get current admin user details
+ * @route GET /api/v1/admin/users/me
+ */
+exports.getCurrentAdmin = async (req, res, next) => {
+    try {
+        const user = await userAdminService.getUserById(req.user.id);
+        responseHandler(res, httpStatus.OK, 'Admin details retrieved successfully', user);
+    } catch (error) {
+        logger.error('Error in getCurrentAdmin controller:', error);
+        next(error);
+    }
+};
 
 /**
  * Get all users with pagination and filtering
@@ -30,10 +45,7 @@ exports.getUsers = async (req, res, next) => {
             includeDeleted === 'true'
         );
         
-        return res.status(httpStatus.OK).json({
-            success: true,
-            ...result
-        });
+        responseHandler(res, httpStatus.OK, 'Users retrieved successfully', result);
     } catch (error) {
         logger.error("Error in getUsers controller:", error);
         next(error);
@@ -47,11 +59,7 @@ exports.getUsers = async (req, res, next) => {
 exports.getUserById = async (req, res, next) => {
     try {
         const user = await userAdminService.getUserById(req.params.id);
-        
-        return res.status(httpStatus.OK).json({
-            success: true,
-            data: user
-        });
+        responseHandler(res, httpStatus.OK, 'User retrieved successfully', user);
     } catch (error) {
         logger.error(`Error in getUserById controller for ID ${req.params.id}:`, error);
         next(error);
@@ -66,12 +74,7 @@ exports.updateUser = async (req, res, next) => {
     try {
         const updateData = req.body;
         const user = await userAdminService.updateUser(req.params.id, updateData);
-        
-        return res.status(httpStatus.OK).json({
-            success: true,
-            message: "User updated successfully",
-            data: user
-        });
+        responseHandler(res, httpStatus.OK, 'User updated successfully', user);
     } catch (error) {
         logger.error(`Error in updateUser controller for ID ${req.params.id}:`, error);
         next(error);
@@ -87,19 +90,11 @@ exports.changeUserStatus = async (req, res, next) => {
         const { status } = req.body;
         
         if (!status) {
-            return res.status(httpStatus.BAD_REQUEST).json({
-                success: false,
-                message: "Status is required"
-            });
+            return responseHandler(res, httpStatus.BAD_REQUEST, 'Status is required');
         }
         
         const user = await userAdminService.changeUserStatus(req.params.id, status);
-        
-        return res.status(httpStatus.OK).json({
-            success: true,
-            message: `User ${status === 'active' ? 'activated' : 'deactivated'} successfully`,
-            data: user
-        });
+        responseHandler(res, httpStatus.OK, `User ${status === 'active' ? 'activated' : 'deactivated'} successfully`, user);
     } catch (error) {
         logger.error(`Error in changeUserStatus controller for ID ${req.params.id}:`, error);
         next(error);
@@ -113,12 +108,7 @@ exports.changeUserStatus = async (req, res, next) => {
 exports.deleteUser = async (req, res, next) => {
     try {
         const result = await userAdminService.deleteUser(req.params.id);
-        
-        return res.status(httpStatus.OK).json({
-            success: true,
-            message: "User deleted successfully",
-            data: result
-        });
+        responseHandler(res, httpStatus.OK, 'User deleted successfully', result);
     } catch (error) {
         logger.error(`Error in deleteUser controller for ID ${req.params.id}:`, error);
         next(error);
@@ -133,12 +123,7 @@ exports.createUser = async (req, res, next) => {
     try {
         const userData = req.body;
         const user = await userAdminService.createUser(userData);
-        
-        return res.status(httpStatus.CREATED).json({
-            success: true,
-            message: "User created successfully",
-            data: user
-        });
+        responseHandler(res, httpStatus.CREATED, 'User created successfully', user);
     } catch (error) {
         logger.error("Error in createUser controller:", error);
         next(error);

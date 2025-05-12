@@ -1,7 +1,11 @@
 const express = require('express');
-const CategoryController = require('../controllers/category.controller');
+const CategoryController = require('../../controllers/category.controller');
+const auth = require('../../middlewares/auth.middleware');
 
 const router = express.Router();
+
+// Apply admin authentication to all routes
+router.use(auth('admin'));
 
 // POST /api/v1/categories
 router.post('/', CategoryController.createCategory);
