@@ -4,10 +4,11 @@ const UserCredentials = require('../models/userCredentials.model');
 const { UnauthorizedError } = require('../features/error');
 const logger = require('../features/logger');
 
-const authenticated = (permission) => {
+const auth = (permission) => {
     return async (req, res, next) => {
         try {
             const authHeader = req.headers.authorization;
+            console.log("🚀 ~ return ~ authHeader:", authHeader);
             if (!authHeader || !authHeader.startsWith('Bearer ')) {
                 throw new UnauthorizedError('No token provided');
             }
@@ -57,6 +58,8 @@ const authenticated = (permission) => {
             logger.error('Authentication error:', error);
             if (error.name === 'JsonWebTokenError') {
                 next(new UnauthorizedError('Invalid token'));
+            } else if (error.name === 'TokenExpiredError') {
+                next(new UnauthorizedError('Token has expired'));
             } else {
                 next(error);
             }
@@ -64,4 +67,4 @@ const authenticated = (permission) => {
     };
 };
 
-module.exports = authenticated;
+module.exports = auth;
