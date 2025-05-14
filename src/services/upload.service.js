@@ -148,55 +148,71 @@ exports.handleThumbnailUpload = async (thumbnail, fileName, userId = 'anonymous'
  * @returns {Promise<Object>} - The upload result
  */
 exports.processVideoChunk = async (chunk, fileName, chunkIndex, totalChunks, userId = 'anonymous', mediaType = 'video') => {
-    const uploadDir = path.join(__dirname, config.cdn.local_upload_path);
-    fileName = sanitizeFilename(fileName.replace(/\s+/g, "_")); // Sanitize filename
-    
-    if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
-    
-    const chunkPath = path.join(uploadDir, `${fileName}.part${chunkIndex}`);
-    
-    // Find or create upload progress record with userId and mediaType
-    let progress = await UploadProgress.findOne({ 
-        fileName,
-        userId,
-        mediaType 
-    });
-    
-    if (!progress) {
-        progress = new UploadProgress({
-            fileId: Date.now().toString(),
-            fileName,
-            userId,
-            mediaType,
-            totalChunks,
-            uploadedChunks: [],
-            status: "in-progress",
-        });
-        await progress.save();
+    try {
+        const uploadDir = path.join(__dirname, config.cdn.local_upload_path);
+        fileName = sanitizeFilename(fileName.replace(/\s+/g, "_")); // Sanitize filename
+
+        // Ensure the upload directory exists
+        if (!fs.existsSync(uploadDir)) {
+            console.log(`Creating upload directory: ${uploadDir}`);
+            fs.mkdirSync(uploadDir, { recursive: true });
+        }
+
+        const chunkPath = path.join(uploadDir, `${fileName}.part${chunkIndex}`);
+        console.log(`🚀 Saving chunk to: ${chunkPath}`);
+        await chunk.mv(chunkPath);
+
+        // Check if chunk is valid
+        if (!chunk) {
+            console.error(`❌ Chunk is undefined or empty for chunkIndex: ${chunkIndex}`);
+            throw new Error(`Invalid chunk data for chunkIndex: ${chunkIndex}`);
+        }
+
+        // Save chunk to disk
+        // try {
+        
+        //     console.log(`✅ Chunk ${chunkIndex + 1}/${totalChunks} saved successfully.`);
+        // } catch (error) {
+        //     console.error(`❌ Failed to save chunk ${chunkIndex + 1}/${totalChunks}:`, error);
+        //     throw new Error(`Failed to save chunk ${chunkIndex + 1}/${totalChunks}`);
+        // }
+
+        // Find or create upload progress record
+        let progress = await UploadProgress.findOne({ fileName, userId, mediaType });
+        if (!progress) {
+            progress = new UploadProgress({
+                fileId: Date.now().toString(),
+                fileName,
+                userId,
+                mediaType,
+                totalChunks,
+                uploadedChunks: [],
+                status: "in-progress",
+            });
+            await progress.save();
+        }
+
+        // Update progress
+        if (!progress.uploadedChunks.includes(chunkIndex)) {
+            progress.uploadedChunks.push(chunkIndex);
+            await progress.save();
+        } else {
+            console.log(`⚠️ Chunk ${chunkIndex} already uploaded. Skipping.`);
+        }
+
+        // If all chunks are uploaded, merge and upload to BunnyCDN
+        if (progress.uploadedChunks.length === totalChunks) {
+            return await exports.mergeAndUploadChunks(fileName, totalChunks, uploadDir, userId, mediaType);
+        }
+
+        return {
+            message: `Chunk ${chunkIndex + 1}/${totalChunks} uploaded successfully.`,
+            chunkFile: chunkPath,
+        };
+    } catch (error) {
+        console.error(`❌ Error in processVideoChunk:`, error);
+        throw error;
     }
-    
-    if (progress.uploadedChunks.includes(chunkIndex)) {
-        console.log(`⚠️ Chunk ${chunkIndex} already uploaded. Skipping.`);
-        return { message: `Chunk ${chunkIndex + 1}/${totalChunks} already uploaded.` };
-    }
-    
-    // Save chunk to disk
-    await chunk.mv(chunkPath);
-    console.log(`✅ Received chunk ${chunkIndex + 1}/${totalChunks} for ${fileName}`);
-    
-    // Update MongoDB with uploaded chunk info
-    progress.uploadedChunks.push(chunkIndex);
-    await progress.save();
-    
-    // If all chunks are uploaded, merge and upload to BunnyCDN
-    if (progress.uploadedChunks.length === totalChunks) {
-        return await exports.mergeAndUploadChunks(fileName, totalChunks, uploadDir, userId, mediaType);
-    }
-    
-    return { 
-        message: `Chunk ${chunkIndex + 1}/${totalChunks} uploaded successfully.`,
-        chunkFile: chunkPath
-    };
 };
 
 /**
@@ -213,10 +229,13 @@ exports.mergeAndUploadChunks = async (fileName, totalChunks, uploadDir, userId, 
     
     const finalFilePath = path.join(uploadDir, fileName);
     const writeStream = fs.createWriteStream(finalFilePath);
+    const chunkFiles = []; // Keep track of chunk files
     
     for (let i = 0; i < totalChunks; i++) {
         const chunkFile = path.join(uploadDir, `${fileName}.part${i}`);
+        chunkFiles.push(chunkFile); // Store chunk file path
         
+        console.log("🚀 ~ exports.mergeAndUploadChunks= ~ chunkFile:", chunkFile);
         if (!fs.existsSync(chunkFile)) {
             console.error(`Missing chunk: ${chunkFile}`);
             throw new Error("Missing chunk file");
@@ -224,7 +243,6 @@ exports.mergeAndUploadChunks = async (fileName, totalChunks, uploadDir, userId, 
         
         const data = fs.readFileSync(chunkFile);
         writeStream.write(data);
-        fs.unlinkSync(chunkFile); // Remove chunk after merging
     }
     
     writeStream.end();
@@ -240,6 +258,13 @@ exports.mergeAndUploadChunks = async (fileName, totalChunks, uploadDir, userId, 
             mediaType,
             originalName: fileName
         });
+        
+        // Only delete chunks after successful upload
+        for (const chunkFile of chunkFiles) {
+            if (fs.existsSync(chunkFile)) {
+                fs.unlinkSync(chunkFile);
+            }
+        }
         
         // Update progress status
         await UploadProgress.findOneAndUpdate(

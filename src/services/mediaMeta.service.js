@@ -1,20 +1,32 @@
 const MediaMeta = require("../models/mediaMeta.model");
 const File = require("../models/file.model");
+const Category = require("../models/category.model");
+const mongoose = require('mongoose');
 const { formatApiResult } = require("../utils/formatApiResult.util");
 const { ApiError } = require("../features/error");
 const httpStatus = require("http-status");
 const socketService = require("./socket.service");
-const mongoose   = require('mongoose')
 
 class MediaMetaService {
-    async createMediaMetaInfo(metaInfo) {
+    async createMediaMetaInfo(metaInfo, isAdmin = false) {
         try {
-            const mediaMeta = await MediaMeta.create(metaInfo);
+            const defaultMetaInfo = {
+                ...metaInfo,
+                status: isAdmin ? 'approved' : 'pending',
+                reviewedBy: isAdmin ? metaInfo.userId : undefined,
+                reviewedAt: isAdmin ? new Date() : undefined
+            };
 
-            // Notify admins about new content that needs approval
-            socketService.notifyNewContent(mediaMeta);
+            const mediaMeta = await MediaMeta.create(defaultMetaInfo);
+            
+            // Enhance with category details
+            const enhanced = await this.enhanceWithCategoryDetails([mediaMeta.toObject()]);
+            
+            if (!isAdmin) {
+                socketService.notifyNewContent(mediaMeta);
+            }
 
-            return mediaMeta;
+            return enhanced[0];
         } catch (error) {
             throw error;
         }
@@ -77,6 +89,7 @@ class MediaMetaService {
                 );
                 result.results = formatApiResult(plain);
                 result.results = await this.enhanceWithFileUrls(result.results);
+                result.results = await this.enhanceWithCategoryDetails(result.results);
             }
 
             return result;
@@ -91,26 +104,18 @@ class MediaMetaService {
      * @returns {Promise<Object>} - Media metadata with enhanced URLs
      */
     async getMediaMetadataById(id) {
-        // 1) Sanity‐check the incoming ID
-        if (!mongoose.isValidObjectId(id)) {
-            throw new ApiError(httpStatus.BAD_REQUEST, 'Invalid media metadata ID')
-        }
-        
-        // force it to an ObjectId
-        const objId = new mongoose.Types.ObjectId(id)
-        const mediaMeta = await MediaMeta.findOne({ _id: objId }).lean().exec()
+        const mediaMeta = await MediaMeta.findOne({ _id: id }).lean().exec();
         
         if (!mediaMeta) {
             throw new ApiError(httpStatus.NOT_FOUND, 'Media metadata not found')
         }
     
-        // 3) Drop the version key
         delete mediaMeta.__v
     
-        // 4) Format & enhance
-        const formatted  = formatApiResult(mediaMeta)
-        const [enhanced] = await this.enhanceWithFileUrls([formatted])
-        return enhanced
+        const formatted = formatApiResult(mediaMeta);
+        const [enhanced] = await this.enhanceWithFileUrls([formatted]);
+        const [withCategory] = await this.enhanceWithCategoryDetails([enhanced]);
+        return withCategory;
     }
     
     
@@ -228,27 +233,25 @@ class MediaMetaService {
    */
     async updateMediaMetadata(id, updateBody) {
         try {
-            const mediaMeta = await MediaMeta.findById(id);
+            const mediaMeta = await MediaMeta.findOne({ _id: id });
             if (!mediaMeta) {
                 throw new ApiError(httpStatus.NOT_FOUND, "Media metadata not found");
             }
 
-            // Update the document
             Object.assign(mediaMeta, updateBody);
             await mediaMeta.save();
 
-            // Convert to plain object and remove mongoose internals
             const plainObject = mediaMeta.toObject();
             delete plainObject.__v;
             delete plainObject.$__;
             delete plainObject.$isNew;
             delete plainObject._doc;
 
-            // Format and enhance with URLs
             const formattedResult = formatApiResult(plainObject);
             const enhancedResult = await this.enhanceWithFileUrls([formattedResult]);
+            const withCategory = await this.enhanceWithCategoryDetails(enhancedResult);
 
-            return enhancedResult[0];
+            return withCategory[0];
         } catch (error) {
             throw error;
         }
@@ -261,7 +264,7 @@ class MediaMetaService {
    */
     async deleteMediaMetadata(id) {
         try {
-            const mediaMeta = await MediaMeta.findById(id);
+            const mediaMeta = await MediaMeta.findOne({ _id: id });
             if (!mediaMeta) {
                 throw new ApiError(httpStatus.NOT_FOUND, "Media metadata not found");
             }
@@ -295,7 +298,7 @@ class MediaMetaService {
    */
     async restoreMediaMetadata(id) {
         try {
-            const mediaMeta = await MediaMeta.findById(id);
+            const mediaMeta = await MediaMeta.findOne({ _id: id });
             if (!mediaMeta) {
                 throw new ApiError(httpStatus.NOT_FOUND, "Media metadata not found");
             }
@@ -346,7 +349,7 @@ class MediaMetaService {
     }
 
     async approveMedia(id, adminId) {
-        const mediaMeta = await MediaMeta.findById(id);
+        const mediaMeta = await MediaMeta.findOne({ _id: id });
         if (!mediaMeta) {
             throw new ApiError(httpStatus.NOT_FOUND, "Media metadata not found");
         }
@@ -370,7 +373,7 @@ class MediaMetaService {
     }
 
     async rejectMedia(id, adminId, rejectionReason) {
-        const mediaMeta = await MediaMeta.findById(id);
+        const mediaMeta = await MediaMeta.findOne({ _id: id });
         if (!mediaMeta) {
             throw new ApiError(httpStatus.NOT_FOUND, "Media metadata not found");
         }
@@ -407,6 +410,45 @@ class MediaMetaService {
     async getRejectedMedia(filter = {}, options = {}) {
         const rejectedFilter = { ...filter, status: "rejected", isDeleted: false };
         return this.getMediaMetadata(rejectedFilter, options);
+    }
+
+    async enhanceWithCategoryDetails(mediaMetadata) {
+        try {
+            // Get all unique category names and convert to ObjectIds
+            const categoryIds = [...new Set(mediaMetadata.map(item => item.category))]
+                .filter(id => id && mongoose.Types.ObjectId.isValid(id))
+                .map(id => new mongoose.Types.ObjectId(id));
+            
+            if (categoryIds.length === 0) {
+                return mediaMetadata;
+            }
+            
+            // Fetch all categories in one query
+            const categories = await Category.find({ _id: { $in: categoryIds } });
+            
+            // Create a map for quick lookup
+            const categoryMap = {};
+            categories.forEach(category => {
+                categoryMap[category._id.toString()] = {
+                    _id: category._id,
+                    name: category.name,
+                    type: category.type,
+                    parentId: category.parentId
+                };
+            });
+
+            // Enhance each media metadata with category details
+            return mediaMetadata.map(item => {
+                const enhancedItem = { ...item };
+                if (item.category && categoryMap[item.category]) {
+                    enhancedItem.categoryDetails = categoryMap[item.category];
+                }
+                return enhancedItem;
+            });
+        } catch (error) {
+            console.error("Error enhancing with category details:", error);
+            return mediaMetadata;
+        }
     }
 }
 

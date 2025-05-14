@@ -87,6 +87,27 @@ const getRejectedMediaSchema = {
     }),
 };
 
+/**
+ * Validation schema for creating media metadata
+ */
+const createMediaMetadataSchema = {
+    body: Joi.object({
+        thumbnailId: Joi.string().required().description('Thumbnail file ID'),
+        mediaFileId: Joi.string().required().description('Media file ID'),
+        title: Joi.string().min(3).max(100).required().description('Media title'),
+        description: Joi.string().max(1000).allow('').optional().description('Media description'),
+        category: Joi.string().max(50).allow('').optional().description('Media category'),
+        mediaType: Joi.string().valid('video', 'reel', 'thumbnail').default('video').description('Type of media'),
+        userId: Joi.string().optional().description('User ID of the uploader'),
+        status: Joi.string().valid('pending', 'approved', 'rejected').optional().description('Media status'),
+        rejectionReason: Joi.string().max(500).allow('').optional().description('Reason for rejection if rejected'),
+        reviewedBy: Joi.string().allow('').optional().description('ID of the reviewer'),
+        reviewedAt: Joi.date().allow(null).optional().description('Date of review'),
+        isDeleted: Joi.boolean().default(false).description('Soft delete flag'),
+        deletedAt: Joi.date().allow(null).optional().description('Date of deletion')
+    })
+};
+
 module.exports = {
     getMediaMetadataSchema,
     updateMediaMetadataSchema,
@@ -97,4 +118,5 @@ module.exports = {
     getPendingMediaSchema,
     getApprovedMediaSchema,
     getRejectedMediaSchema,
+    createMediaMetadataSchema,
 }; 

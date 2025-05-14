@@ -168,6 +168,7 @@ const mediaMetaController = {
     createMediaMetaDetails: async (req, res, next) => {
         try {
             const { body } = req;
+            const isAdmin = req.user?.role === 'admin';
             
             // Add userId from JWT authentication
             if (req.user && req.user.id) {
@@ -176,8 +177,12 @@ const mediaMetaController = {
                 logger.warn("No user ID found in JWT token for media upload");
             }
             
-            const result = await mediaMetaService.createMediaMetaInfo(body);
-            return res.status(httpStatus.OK).json(result);
+            const result = await mediaMetaService.createMediaMetaInfo(body, isAdmin);
+            return res.status(httpStatus.OK).json({
+                success: true,
+                message: isAdmin ? 'Media created and approved successfully' : 'Media created and pending approval',
+                data: result
+            });
         } catch (error) {
             logger.error(error);
             next(error);

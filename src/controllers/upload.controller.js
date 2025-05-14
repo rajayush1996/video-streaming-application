@@ -38,11 +38,7 @@ const uploadVideo = async (req, res) => {
             'video' // Explicitly set media type for video uploads
         );
 
-        // Clean up chunks after merging if they exist
-        if (result.chunkFile && fs.existsSync(result.chunkFile)) {
-            fs.unlinkSync(result.chunkFile);
-        }
-        // Clean up final file after upload if it exists
+        // Only clean up final file after successful upload
         if (result.finalFilePath && fs.existsSync(result.finalFilePath)) {
             fs.unlinkSync(result.finalFilePath);
         }
