@@ -38,6 +38,7 @@ const envVarsSchema = Joi.object({
         ENVIRONMENT: Joi.string().required().description('The environment of the app'),
         CLIENT_URL: Joi.string().required().description('The vsa host URL of client side'),
         SERVER_URL: Joi.string().required().description('The vsa host URL of server side'),
+        ADMIN_URL: Joi.string().required().description('The admin host URL of admin side'),
     }).description('Environments setting'),
     DATABASE: Joi.object({
         TYPE: Joi.string().required().description('The type of database (e.g., mongodb)'),
@@ -113,7 +114,8 @@ const configuration = {
         port: process.env.PORT || envVars.ENV.PORT,
         environment: process.env.ENVIRONMENT || envVars.ENV.ENVIRONMENT,
         client_url: process.env.CLIENT_URL || envVars.ENV.CLIENT_URL,
-        server_url: process.env.SERVER_URL || envVars.ENV.SERVER_URL
+        server_url: process.env.SERVER_URL || envVars.ENV.SERVER_URL,
+        admin_url: process.env.ADMIN_URL || envVars.ENV.ADMIN_URL
     },
     database: {
         type: process.env.DATABASE_TYPE || envVars.DATABASE.TYPE,
