@@ -9,6 +9,8 @@ const creatorRequestRoutes = require('../creatorRequest.route');
 const userRoutes = require('./user.route');
 const mediaMetaRoutes = require('./mediaMeta.route');
 const reelsRoutes = require('./reels.route');
+const homeRoutes = require('./home.route');
+const videoRoutes = require('./video.route');
 
 router.use('/auth', authRoutes);
 
@@ -22,12 +24,18 @@ router.use('/creator-requests', creatorRequestRoutes);
 router.use('/upload', uploadRoutes);
 
 // Blog routes (public access for reading, creator access for writing)
-router.use('/blog', blogRoutes);
+router.use('/blogs', blogRoutes);
 
 // Media routes (public access)
 router.use('/media', mediaMetaRoutes);
 
 // Reels routes (public access)
 router.use('/reels', reelsRoutes);
+
+// Video routes (public access)
+router.use('/videos', videoRoutes);
+
+// Home routes (public access)
+router.use('/home', homeRoutes);
 
 module.exports = router; 

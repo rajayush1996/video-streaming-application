@@ -1,6 +1,7 @@
 const mongoose = require('mongoose');
 const utils = require('../utils');
 const { toJSON, paginate } = require('./plugins');
+const auditPlugin = require('./plugins/audit.plugin');
 
 const mediaMetadataSchema = new mongoose.Schema({
     _id: {
@@ -101,6 +102,7 @@ const mediaMetadataSchema = new mongoose.Schema({
 // Remove the strict validation for status-dependent fields since it's admin side
 mediaMetadataSchema.plugin(toJSON);
 mediaMetadataSchema.plugin(paginate);
+mediaMetadataSchema.plugin(auditPlugin, { resourceType: 'MEDIA_METADATA' });
 
 // Indexes
 mediaMetadataSchema.index({ userId: 1 });

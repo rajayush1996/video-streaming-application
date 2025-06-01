@@ -1,6 +1,7 @@
 const mongoose = require('mongoose');
 const { Schema } = mongoose;
 const { paginate, toJSON } = require('./plugins');
+const auditPlugin = require('./plugins/audit.plugin');
 
 const FileSchema = new Schema({
     fileId: { type: String, required: true, unique: true },
@@ -16,7 +17,6 @@ const FileSchema = new Schema({
 
 FileSchema.plugin(toJSON);
 FileSchema.plugin(paginate);
-
-
+FileSchema.plugin(auditPlugin, { resourceType: 'FILE' });
 
 module.exports = mongoose.model('File', FileSchema);

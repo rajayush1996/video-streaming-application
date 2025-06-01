@@ -86,10 +86,117 @@ const updateProfile = async (req, res, next) => {
     }
 };
 
+/**
+ * Get public user profile
+ * @param {Object} req - Express request object
+ * @param {Object} res - Express response object
+ * @param {Function} next - Express next middleware
+ */
+const getPublicProfile = async (req, res, next) => {
+    try {
+        const userId = req.params.id;
+        const user = await UserService.getPublicProfile(userId);
+        responseHandler(res, httpStatus.OK, 'Public profile retrieved successfully', user);
+    } catch (error) {
+        next(error);
+    }
+};
+
+/**
+ * Follow a user
+ * @param {Object} req - Express request object
+ * @param {Object} res - Express response object
+ * @param {Function} next - Express next middleware
+ */
+const followUser = async (req, res, next) => {
+    try {
+        const followerId = req.user.id;
+        const followingId = req.params.id;
+        const result = await UserService.followUser(followerId, followingId);
+        responseHandler(res, httpStatus.OK, 'Successfully followed user', result);
+    } catch (error) {
+        next(error);
+    }
+};
+
+/**
+ * Unfollow a user
+ * @param {Object} req - Express request object
+ * @param {Object} res - Express response object
+ * @param {Function} next - Express next middleware
+ */
+const unfollowUser = async (req, res, next) => {
+    try {
+        const followerId = req.user.id;
+        const followingId = req.params.id;
+        const result = await UserService.unfollowUser(followerId, followingId);
+        responseHandler(res, httpStatus.OK, 'Successfully unfollowed user', result);
+    } catch (error) {
+        next(error);
+    }
+};
+
+/**
+ * Get user's followers
+ * @param {Object} req - Express request object
+ * @param {Object} res - Express response object
+ * @param {Function} next - Express next middleware
+ */
+const getFollowers = async (req, res, next) => {
+    try {
+        const userId = req.params.id;
+        const { page = 1, limit = 10 } = req.query;
+        const followers = await UserService.getFollowers(userId, { page, limit });
+        responseHandler(res, httpStatus.OK, 'Followers retrieved successfully', followers);
+    } catch (error) {
+        next(error);
+    }
+};
+
+/**
+ * Get users that the user is following
+ * @param {Object} req - Express request object
+ * @param {Object} res - Express response object
+ * @param {Function} next - Express next middleware
+ */
+const getFollowing = async (req, res, next) => {
+    try {
+        const userId = req.params.id;
+        const { page = 1, limit = 10 } = req.query;
+        const following = await UserService.getFollowing(userId, { page, limit });
+        responseHandler(res, httpStatus.OK, 'Following users retrieved successfully', following);
+    } catch (error) {
+        next(error);
+    }
+};
+
+/**
+ * Get user's feed
+ * @param {Object} req - Express request object
+ * @param {Object} res - Express response object
+ * @param {Function} next - Express next middleware
+ */
+const getUserFeed = async (req, res, next) => {
+    try {
+        const userId = req.user.id;
+        const { page = 1, limit = 10 } = req.query;
+        const feed = await UserService.getUserFeed(userId, { page, limit });
+        responseHandler(res, httpStatus.OK, 'Feed retrieved successfully', feed);
+    } catch (error) {
+        next(error);
+    }
+};
+
 module.exports = {
     createUser,
     getUserById,
     updateUser,
     deleteUser,
-    updateProfile
+    updateProfile,
+    getPublicProfile,
+    followUser,
+    unfollowUser,
+    getFollowers,
+    getFollowing,
+    getUserFeed
 };

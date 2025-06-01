@@ -1,10 +1,10 @@
 const mongoose = require('mongoose');
 const utils = require('../utils');
+const auditPlugin = require('./plugins/audit.plugin');
 
 const userProfileSchema = new mongoose.Schema({
     _id: {
         type: String,
-        default: null
     },
     userId: {
         type: String,
@@ -27,30 +27,55 @@ const userProfileSchema = new mongoose.Schema({
     },
     bio: {
         type: String,
-        maxlength: 500,
-        default: ''
+        trim: true,
+        maxlength: 500
     },
     location: {
         type: String,
-        default: ''
+        trim: true
+    },
+    website: {
+        type: String,
+        trim: true
     },
     socialLinks: {
         twitter: String,
-        instagram: String,
-        youtube: String,
         facebook: String,
+        instagram: String,
         linkedin: String,
-        website: String
+        youtube: String
+    },
+    following: [{
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'UserCredentials'
+    }],
+    followers: [{
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'UserCredentials'
+    }],
+    stats: {
+        followers: {
+            type: Number,
+            default: 0
+        },
+        following: {
+            type: Number,
+            default: 0
+        },
+        posts: {
+            type: Number,
+            default: 0
+        },
+        views: {
+            type: Number,
+            default: 0
+        },
+        likes: {
+            type: Number,
+            default: 0
+        }
     },
     preferences: {
-        isPublic: {
-            type: Boolean,
-            default: true
-        },
-        showEmail: {
-            type: Boolean,
-            default: false
-        },
         emailNotifications: {
             type: Boolean,
             default: true
@@ -69,27 +94,9 @@ const userProfileSchema = new mongoose.Schema({
             default: 'en'
         }
     },
-    stats: {
-        followers: {
-            type: Number,
-            default: 0
-        },
-        following: {
-            type: Number,
-            default: 0
-        },
-        posts: {
-            type: Number,
-            default: 0
-        },
-        likes: {
-            type: Number,
-            default: 0
-        },
-        views: {
-            type: Number,
-            default: 0
-        }
+    lastActive: {
+        type: Date,
+        default: Date.now
     },
     achievements: [{
         type: {
@@ -149,10 +156,19 @@ userProfileSchema.pre('validate', async function(next) {
     next();
 });
 
+// Apply audit plugin
+userProfileSchema.plugin(auditPlugin, { resourceType: 'PROFILE' });
+
 // Index for faster queries
 userProfileSchema.index({ userId: 1 });
+userProfileSchema.index({ displayName: 'text', bio: 'text' });
 userProfileSchema.index({ 'stats.followers': -1 });
 userProfileSchema.index({ 'stats.posts': -1 });
+
+// Virtual for full profile URL
+userProfileSchema.virtual('profileUrl').get(function() {
+    return `/api/v1/users/${this.userId}`;
+});
 
 // Method to update stats
 userProfileSchema.methods.updateStats = async function(statType, increment = 1) {
@@ -184,6 +200,13 @@ userProfileSchema.methods.addActivity = async function(activity) {
             }
         }
     });
+};
+
+// Method to convert to JSON
+userProfileSchema.methods.toJSON = function() {
+    const profile = this.toObject();
+    delete profile.__v;
+    return profile;
 };
 
 const UserProfile = mongoose.model('UserProfile', userProfileSchema);

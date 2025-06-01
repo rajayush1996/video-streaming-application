@@ -6,7 +6,7 @@ const mediaMetaController = {
     getMediaMetadata: async (req, res, next) => {
         try {
         // Extract query parameters (already validated by Joi)
-            const { page, limit, sortBy, thumbnailId, mediaFileId } = req.query;
+            const { page, limit, sortBy, thumbnailId, mediaFileId, type } = req.query;
         
             // Build filter
             const filter = {};
@@ -18,7 +18,7 @@ const mediaMetaController = {
             if (page) options.page = parseInt(page);
             if (limit) options.limit = parseInt(limit);
             if (sortBy) options.sortBy = sortBy;
-        
+            if (type) options.type = type;
             // Get paginated results with URLs
             const result = await mediaMetaService.getMediaMetadata(filter, options);
         
@@ -168,6 +168,7 @@ const mediaMetaController = {
     createMediaMetaDetails: async (req, res, next) => {
         try {
             const { body } = req;
+            console.log("🚀 ~ createMediaMetaDetails: ~ body:", body);
             const isAdmin = req.user?.role === 'admin';
             
             // Add userId from JWT authentication

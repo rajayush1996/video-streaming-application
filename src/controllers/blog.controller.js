@@ -32,12 +32,13 @@ exports.createBlog = async (req, res, next) => {
 exports.getAllBlogs = async (req, res, next) => {
     try {
         // Extract query parameters
-        const { page, limit, sortBy, status, category, includeDeleted } = req.query;
+        const { page, limit, sortBy, status, category, includeDeleted, featured } = req.query;
         
         // Build filter
         const filter = {};
         if (status) filter.status = status;
         if (category) filter.category = category;
+        if (featured) filter.featured = featured === 'true';
         
         // Build options
         const options = {};

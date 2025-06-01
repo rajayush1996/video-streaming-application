@@ -8,6 +8,8 @@ const { ApiError } = require('../features/error');
 const logger = require('../features/logger');
 const UserCredentials = require('../models/userCredentials.model');
 const UserProfile = require('../models/userProfile.model');
+const Media = require('../models/media.model');
+const Blog = require('../models/blog.model');
 
 class UserService {
     /**
@@ -159,6 +161,8 @@ class UserService {
                     updatedAt: userCredentials.updatedAt
                 },
                 profile: userProfile ? {
+                    username: userCredentials.username,
+                    displayName: userProfile.displayName || userCredentials.username,
                     bio: userProfile.bio || '',
                     location: userProfile.location || '',
                     avatar: userProfile.avatar || '',
@@ -177,6 +181,8 @@ class UserService {
                         }
                     }
                 } : {
+                    username: userCredentials.username,
+                    displayName: userCredentials.username,
                     bio: '',
                     location: '',
                     avatar: '',
@@ -208,8 +214,7 @@ class UserService {
 
             return response;
         } catch (error) {
-            logger.error('Error fetching user:', error);
-            if (error instanceof ApiError) throw error;
+            logger.error('Error fetching user by ID:', error);
             throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, 'Error fetching user');
         }
     }
@@ -502,6 +507,377 @@ class UserService {
         } catch (error) {
             logger.error('Error fetching user by identifier:', error);
             throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, 'Error fetching user');
+        }
+    }
+
+    /**
+     * Get public user profile
+     * @param {string} userId - User ID
+     * @returns {Promise<Object>}
+     */
+    async getPublicProfile(userId) {
+        try {
+            const userCredentials = await UserCredentials.findById(userId)
+                .select('username email role isActive');
+            
+            if (!userCredentials) {
+                throw new ApiError(httpStatus.NOT_FOUND, 'User not found');
+            }
+
+            const userProfile = await UserProfile.findOne({ userId });
+
+            return {
+                id: userCredentials._id,
+                username: userCredentials.username,
+                name: userProfile?.displayName || userCredentials.username,
+                displayName: userProfile?.displayName || userCredentials.username,
+                profilePicture: userProfile?.avatar || '',
+                bio: userProfile?.bio || '',
+                isCreator: userCredentials.role === 'creator',
+                stats: userProfile ? {
+                    followers: userProfile.stats.followers || 0,
+                    following: userProfile.stats.following || 0,
+                    posts: userProfile.stats.posts || 0
+                } : {
+                    followers: 0,
+                    following: 0,
+                    posts: 0
+                }
+            };
+        } catch (error) {
+            logger.error('Error fetching public profile:', error);
+            if (error instanceof ApiError) throw error;
+            throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, 'Error fetching public profile');
+        }
+    }
+
+    /**
+     * Follow a user
+     * @param {string} followerId - Follower's user ID
+     * @param {string} followingId - User ID to follow
+     * @returns {Promise<Object>}
+     */
+    async followUser(followerId, followingId) {
+        try {
+            // Check if users exist
+            const [follower, following] = await Promise.all([
+                UserProfile.findOne({ userId: followerId }),
+                UserProfile.findOne({ userId: followingId })
+            ]);
+
+            if (!follower || !following) {
+                throw new ApiError(httpStatus.NOT_FOUND, 'User not found');
+            }
+
+            // Check if already following
+            const isFollowing = await UserProfile.findOne({
+                userId: followerId,
+                'following': followingId
+            });
+
+            if (isFollowing) {
+                throw new ApiError(httpStatus.BAD_REQUEST, 'Already following this user');
+            }
+
+            // Update follower's following list and following's followers list
+            await Promise.all([
+                UserProfile.updateOne(
+                    { userId: followerId },
+                    { $addToSet: { following: followingId } }
+                ),
+                UserProfile.updateOne(
+                    { userId: followingId },
+                    { $addToSet: { followers: followerId } }
+                )
+            ]);
+
+            // Update stats
+            await Promise.all([
+                UserProfile.updateOne(
+                    { userId: followerId },
+                    { $inc: { 'stats.following': 1 } }
+                ),
+                UserProfile.updateOne(
+                    { userId: followingId },
+                    { $inc: { 'stats.followers': 1 } }
+                )
+            ]);
+
+            return {
+                message: 'Successfully followed user',
+                followersCount: following.stats.followers + 1
+            };
+        } catch (error) {
+            logger.error('Error following user:', error);
+            if (error instanceof ApiError) throw error;
+            throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, 'Error following user');
+        }
+    }
+
+    /**
+     * Unfollow a user
+     * @param {string} followerId - Follower's user ID
+     * @param {string} followingId - User ID to unfollow
+     * @returns {Promise<Object>}
+     */
+    async unfollowUser(followerId, followingId) {
+        try {
+            // Check if users exist
+            const [follower, following] = await Promise.all([
+                UserProfile.findOne({ userId: followerId }),
+                UserProfile.findOne({ userId: followingId })
+            ]);
+
+            if (!follower || !following) {
+                throw new ApiError(httpStatus.NOT_FOUND, 'User not found');
+            }
+
+            // Check if following
+            const isFollowing = await UserProfile.findOne({
+                userId: followerId,
+                'following': followingId
+            });
+
+            if (!isFollowing) {
+                throw new ApiError(httpStatus.BAD_REQUEST, 'Not following this user');
+            }
+
+            // Update follower's following list and following's followers list
+            await Promise.all([
+                UserProfile.updateOne(
+                    { userId: followerId },
+                    { $pull: { following: followingId } }
+                ),
+                UserProfile.updateOne(
+                    { userId: followingId },
+                    { $pull: { followers: followerId } }
+                )
+            ]);
+
+            // Update stats
+            await Promise.all([
+                UserProfile.updateOne(
+                    { userId: followerId },
+                    { $inc: { 'stats.following': -1 } }
+                ),
+                UserProfile.updateOne(
+                    { userId: followingId },
+                    { $inc: { 'stats.followers': -1 } }
+                )
+            ]);
+
+            return {
+                message: 'Successfully unfollowed user',
+                followersCount: following.stats.followers - 1
+            };
+        } catch (error) {
+            logger.error('Error unfollowing user:', error);
+            if (error instanceof ApiError) throw error;
+            throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, 'Error unfollowing user');
+        }
+    }
+
+    /**
+     * Get user's followers
+     * @param {string} userId - User ID
+     * @param {Object} options - Pagination options
+     * @returns {Promise<Object>}
+     */
+    async getFollowers(userId, options = {}) {
+        try {
+            const { page = 1, limit = 10 } = options;
+            const skip = (page - 1) * limit;
+
+            const userProfile = await UserProfile.findOne({ userId });
+            if (!userProfile) {
+                throw new ApiError(httpStatus.NOT_FOUND, 'User not found');
+            }
+
+            const followers = await UserProfile.find({ userId: { $in: userProfile.followers } })
+                .select('userId displayName avatar')
+                .skip(skip)
+                .limit(limit);
+
+            const total = userProfile.followers.length;
+
+            // Get user credentials for each follower
+            const followersWithDetails = await Promise.all(
+                followers.map(async (follower) => {
+                    const userCred = await UserCredentials.findById(follower.userId)
+                        .select('username role');
+                    return {
+                        id: follower.userId,
+                        name: follower.displayName || userCred.username,
+                        profilePicture: follower.avatar || '',
+                        isFollowing: userProfile.following.includes(follower.userId)
+                    };
+                })
+            );
+
+            return {
+                items: followersWithDetails,
+                total,
+                page,
+                limit
+            };
+        } catch (error) {
+            logger.error('Error fetching followers:', error);
+            if (error instanceof ApiError) throw error;
+            throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, 'Error fetching followers');
+        }
+    }
+
+    /**
+     * Get users that the user is following
+     * @param {string} userId - User ID
+     * @param {Object} options - Pagination options
+     * @returns {Promise<Object>}
+     */
+    async getFollowing(userId, options = {}) {
+        try {
+            const { page = 1, limit = 10 } = options;
+            const skip = (page - 1) * limit;
+
+            const userProfile = await UserProfile.findOne({ userId });
+            if (!userProfile) {
+                throw new ApiError(httpStatus.NOT_FOUND, 'User not found');
+            }
+
+            const following = await UserProfile.find({ userId: { $in: userProfile.following } })
+                .select('userId displayName avatar')
+                .skip(skip)
+                .limit(limit);
+
+            const total = userProfile.following.length;
+
+            // Get user credentials for each following user
+            const followingWithDetails = await Promise.all(
+                following.map(async (followed) => {
+                    const userCred = await UserCredentials.findById(followed.userId)
+                        .select('username role');
+                    return {
+                        id: followed.userId,
+                        name: followed.displayName || userCred.username,
+                        profilePicture: followed.avatar || '',
+                        isFollowing: true
+                    };
+                })
+            );
+
+            return {
+                items: followingWithDetails,
+                total,
+                page,
+                limit
+            };
+        } catch (error) {
+            logger.error('Error fetching following users:', error);
+            if (error instanceof ApiError) throw error;
+            throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, 'Error fetching following users');
+        }
+    }
+
+    /**
+     * Get user's feed
+     * @param {string} userId - User ID
+     * @param {Object} options - Pagination options
+     * @returns {Promise<Object>}
+     */
+    async getUserFeed(userId, options = {}) {
+        try {
+            const { page = 1, limit = 10 } = options;
+            const skip = (page - 1) * limit;
+
+            const userProfile = await UserProfile.findOne({ userId });
+            if (!userProfile) {
+                throw new ApiError(httpStatus.NOT_FOUND, 'User not found');
+            }
+
+            // Get posts from followed users
+            const followingIds = userProfile.following;
+            followingIds.push(userId); // Include user's own posts
+
+            // Get media posts
+            const mediaPosts = await Media.find({
+                creatorId: { $in: followingIds },
+                status: 'published'
+            })
+                .sort({ createdAt: -1 })
+                .skip(skip)
+                .limit(limit)
+                .populate('creatorId', 'username displayName avatar');
+
+            // Get blog posts
+            const blogPosts = await Blog.find({
+                authorId: { $in: followingIds },
+                status: 'published'
+            })
+                .sort({ createdAt: -1 })
+                .skip(skip)
+                .limit(limit)
+                .populate('authorId', 'username displayName avatar');
+
+            // Combine and sort posts
+            const feed = [
+                ...mediaPosts.map(post => ({
+                    type: 'media',
+                    content: {
+                        id: post._id,
+                        title: post.title,
+                        description: post.description,
+                        thumbnail: post.thumbnail,
+                        views: post.views,
+                        likes: post.likes,
+                        comments: post.comments,
+                        shares: post.shares,
+                        duration: post.duration,
+                        tags: post.tags,
+                        category: post.category,
+                        creator: {
+                            id: post.creatorId._id,
+                            name: post.creatorId.displayName || post.creatorId.username,
+                            profilePicture: post.creatorId.avatar
+                        },
+                        createdAt: post.createdAt
+                    }
+                })),
+                ...blogPosts.map(post => ({
+                    type: 'blog',
+                    content: {
+                        id: post._id,
+                        title: post.title,
+                        content: post.content,
+                        author: {
+                            id: post.authorId._id,
+                            name: post.authorId.displayName || post.authorId.username,
+                            profilePicture: post.authorId.avatar
+                        },
+                        tags: post.tags,
+                        likes: post.likes,
+                        comments: post.comments,
+                        shares: post.shares,
+                        readTime: post.readTime,
+                        status: post.status,
+                        createdAt: post.createdAt
+                    }
+                }))
+            ].sort((a, b) => b.content.createdAt - a.content.createdAt);
+
+            const total = await Promise.all([
+                Media.countDocuments({ creatorId: { $in: followingIds }, status: 'published' }),
+                Blog.countDocuments({ authorId: { $in: followingIds }, status: 'published' })
+            ]).then(([mediaCount, blogCount]) => mediaCount + blogCount);
+
+            return {
+                items: feed,
+                total,
+                page,
+                limit
+            };
+        } catch (error) {
+            logger.error('Error fetching user feed:', error);
+            if (error instanceof ApiError) throw error;
+            throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, 'Error fetching user feed');
         }
     }
 

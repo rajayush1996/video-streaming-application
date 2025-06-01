@@ -16,7 +16,7 @@ class AuthService {
     // User Signup (With Email Verification)
     async signUpUser(body) {
         try {
-            const { email, password, username, role = 'user' } = body;
+            const { email, password, username, role = 'user', name } = body;
 
             // Check if email or username already exists
             const existingUser = await UserCredentials.findOne({ 
@@ -38,13 +38,13 @@ class AuthService {
                 role,
                 isEmailVerified: false,
                 emailVerificationToken,
-                emailVerificationExpires
+                emailVerificationExpires,
             });
 
             // Create user profile
             await UserProfile.create({
                 userId: user._id,
-                displayName: username
+                displayName: name
             });
 
             // Send email verification link

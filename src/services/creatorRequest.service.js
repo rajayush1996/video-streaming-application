@@ -1,7 +1,9 @@
 const httpStatus = require('http-status');
-const { CreatorRequest, UserCredentials } = require('../models');
+const CreatorRequest = require('../models/creatorRequest.model');
+const UserCredentials = require('../models/userCredentials.model');
 const { ApiError } = require('../features/error');
 const logger = require('../features/logger');
+const socketService = require('./socket.service');
 
 class CreatorRequestService {
     /**
@@ -10,6 +12,7 @@ class CreatorRequestService {
      * @returns {Promise<Object>}
      */
     async createRequest(requestBody) {
+        console.log("🚀 ~ CreatorRequestService ~ createRequest ~ requestBody:", requestBody);
         try {
             // Check if user already has a pending request
             const existingRequest = await CreatorRequest.findOne({
@@ -31,6 +34,14 @@ class CreatorRequestService {
             }
 
             const request = await CreatorRequest.create(requestBody);
+            
+            // Notify admins about new creator request
+            socketService.notifyNewCreatorRequest(request);
+            
+            // Update pending requests count for admins
+            const pendingCount = await CreatorRequest.countDocuments({ status: 'pending' });
+            socketService.notifyPendingCreatorRequestsCount(pendingCount);
+
             return request;
         } catch (error) {
             logger.error('Error creating creator request:', error);
@@ -126,6 +137,14 @@ class CreatorRequestService {
             }
 
             await session.commitTransaction();
+
+            // Notify user about request status
+            socketService.notifyCreatorRequestStatus(request.userId, updateBody.status, request);
+            
+            // Update pending requests count for admins
+            const pendingCount = await CreatorRequest.countDocuments({ status: 'pending' });
+            socketService.notifyPendingCreatorRequestsCount(pendingCount);
+
             return request;
         } catch (error) {
             await session.abortTransaction();

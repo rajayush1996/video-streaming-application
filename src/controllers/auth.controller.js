@@ -9,13 +9,13 @@ const cleanErrorMessage = (message) => {
     return message.replace(/\u001b\[\d+m/g, '').trim();
 };
 
-const signUp = async (req, res) => {
+const signUp = async (req, res, next) => {
     try {
         const result = await authService.signUpUser(req.body);
         responseHandler(res, httpStatus.CREATED, 'User registered successfully', result);
     } catch (error) {
         logger.error('Error in signUp:', error);
-        throw new ApiError(error.statusCode || httpStatus.INTERNAL_SERVER_ERROR, cleanErrorMessage(error.message));
+        next(new ApiError(error.statusCode || httpStatus.INTERNAL_SERVER_ERROR, cleanErrorMessage(error.message)));
     }
 };
 

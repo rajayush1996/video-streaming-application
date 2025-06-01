@@ -2,6 +2,7 @@ const mongoose = require('mongoose');
 const { Schema } = mongoose;
 const { paginate, toJSON } = require('./plugins');
 const utils = require('../utils');
+const auditPlugin = require('./plugins/audit.plugin');
 
 const FeedSchema = new Schema({
     type: {
@@ -120,6 +121,7 @@ const FeedSchema = new Schema({
 // Add plugin that converts mongoose to json
 FeedSchema.plugin(toJSON);
 FeedSchema.plugin(paginate);
+FeedSchema.plugin(auditPlugin, { resourceType: 'FEED' });
 
 FeedSchema.pre('save', async function (next) {
     const feed = this;

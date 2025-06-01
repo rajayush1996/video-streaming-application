@@ -6,6 +6,7 @@ const router = express.Router();
 const adminRoutes = require('./admin');
 const userRoutes = require('./user');
 const creatorRequestRoutes = require('./creatorRequest.route');
+const notificationRoutes = require('./v1/notification.route');
 
 /**
  * GET v1/status
@@ -22,5 +23,8 @@ router.use('/user', userRoutes);
 
 // Creator request routes
 router.use('/creator-requests', creatorRequestRoutes);
+
+// Notification routes
+router.use('/notifications', notificationRoutes);
 
 module.exports = router;

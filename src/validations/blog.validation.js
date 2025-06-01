@@ -19,8 +19,10 @@ const createBlogSchema = {
         }),
         category: Joi.string().required().messages({
             'string.empty': 'Category cannot be empty',
-            'any.required': 'Category is required'
+            'any.required': 'Category is required',
+            'any.only': 'Invalid category'
         }),
+        featured: Joi.boolean().default(false),
         isPublished: Joi.boolean().default(false),
         thumbnailUrl: Joi.string().uri().messages({
             'string.uri': 'Thumbnail URL must be a valid URI'
@@ -47,7 +49,8 @@ const updateBlogSchema = {
         tags: Joi.array().items(Joi.string()).max(10).messages({
             'array.max': 'Cannot add more than 10 tags'
         }),
-        category: Joi.string(),
+        category: Joi.string().valid('Technology', 'Lifestyle', 'Travel', 'Food', 'Health', 'Business', 'Entertainment', 'Education', 'Sports', 'Other'),
+        featured: Joi.boolean(),
         isPublished: Joi.boolean(),
         thumbnailUrl: Joi.string().uri().messages({
             'string.uri': 'Thumbnail URL must be a valid URI'

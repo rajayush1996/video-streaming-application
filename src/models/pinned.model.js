@@ -2,6 +2,7 @@ const mongoose = require('mongoose');
 const { Schema } = mongoose;
 const { paginate, toJSON } = require('./plugins');
 const utils = require('../utils');
+const auditPlugin = require('./plugins/audit.plugin');
 
 const PinnedPostSchema = new Schema({
     userId: { type: String, required: true },
@@ -11,14 +12,14 @@ const PinnedPostSchema = new Schema({
         type: String,
         auto: true,
     }
-
-},{
+}, {
     timestamps: true,
     _id: false
 });
 
 PinnedPostSchema.plugin(toJSON);
 PinnedPostSchema.plugin(paginate);
+PinnedPostSchema.plugin(auditPlugin, { resourceType: 'PINNED_POST' });
 
 PinnedPostSchema.pre('validate', async function (next) {
     const pinned = this;
@@ -27,6 +28,5 @@ PinnedPostSchema.pre('validate', async function (next) {
     }
     next();
 });
-
 
 module.exports = mongoose.model('PinnedPost', PinnedPostSchema);

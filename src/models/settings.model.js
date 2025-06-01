@@ -1,11 +1,12 @@
 const mongoose = require("mongoose");
 const { toJSON, paginate } = require('./plugins');
+const utils = require('../utils');
 
 const settingsSchema = new mongoose.Schema(
     {
         user: { 
-            type: mongoose.Schema.Types.ObjectId, 
-            ref: "User", 
+            type: String, 
+            ref: "UserCredentials", 
             required: true,
             unique: true 
         },
@@ -25,14 +26,27 @@ const settingsSchema = new mongoose.Schema(
             theme: { type: String, enum: ["LIGHT", "DARK", "SYSTEM"], default: "SYSTEM" }
         }
     },
-    { timestamps: true }
+    { 
+        timestamps: true,
+        _id: false // Disable auto _id generation
+    }
 );
+
+// Generate UUID with prefix before saving
+settingsSchema.pre('validate', async function(next) {
+    if (!this._id) {
+        this._id = utils.uuid('s-');
+    }
+    next();
+});
 
 // Add plugin that converts mongoose to json
 settingsSchema.plugin(toJSON);
 settingsSchema.plugin(paginate);
 
-/**
- * @typedef Settings
- */
-module.exports = mongoose.model("Settings", settingsSchema); 
+// Indexes
+settingsSchema.index({ user: 1 });
+
+const Settings = mongoose.model('Settings', settingsSchema);
+
+module.exports = Settings; 

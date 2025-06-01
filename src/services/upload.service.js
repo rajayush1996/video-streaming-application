@@ -16,6 +16,14 @@ const VID_CONTAINER_NAME = config.cdn.bunny_cdn_vid_container_name;
 const THUMBNAIL_CONTAINER_NAME = config.cdn.bunny_cdn_thumbnail_container_name;
 
 /**
+ * Check if we're in local environment
+ * @returns {boolean} - True if running locally
+ */
+const isLocalEnvironment = () => {
+    return config.env.environment;
+};
+
+/**
  * Upload a chunk to BunnyCDN
  * @param {string} filePath - The local chunk path
  * @param {string} filename - The file name in BunnyCDN
@@ -50,17 +58,47 @@ exports.uploadChunk = async (filePath, filename, isFirstChunk) => {
 };
 
 
-exports.uploadToBunnyCDN =async (filePath, fileName, options={}) =>{
+exports.uploadToBunnyCDN = async (filePath, fileName, options = {}) => {
+
     try {
-        // ✅ Ensure the merged file actually exists before attempting upload
         if (!fs.existsSync(filePath)) {
             throw new Error(`File not found: ${filePath}`);
         }
+
         let containerName = VID_CONTAINER_NAME;
-        if(options.type === 'thumbnail') {
+        if (options.type === 'thumbnail') {
             containerName = THUMBNAIL_CONTAINER_NAME;
         }
 
+        // If we're in local environment, save file locally
+        if (isLocalEnvironment() === 'development') {
+            const uploadDir = path.join(__dirname, config.cdn.local_upload_path, containerName);
+            if (!fs.existsSync(uploadDir)) {
+                fs.mkdirSync(uploadDir, { recursive: true });
+            }
+
+            const finalPath = path.join(uploadDir, fileName);
+            fs.copyFileSync(filePath, finalPath);
+
+            const stats = fs.statSync(filePath);
+            const url = `${config.env.server_url}/uploads/${containerName}/${fileName}`;
+
+            const saved = await fileSchema.create({
+                fileId: path.parse(fileName).name,
+                blobName: fileName,
+                containerName: containerName,
+                originalName: options.originalName || fileName,
+                mimeType: options.mimeType || "application/octet-stream",
+                size: stats.size,
+                tags: options.tags || [],
+                visibility: options.visibility || "public",
+                url,
+            });
+
+            return { url, file: saved };
+        }
+
+        // Otherwise, upload to BunnyCDN
         const fileStream = fs.createReadStream(filePath);
         const uploadUrl = `${BUNNY_STORAGE_URL}/${containerName}/${fileName}`;
 
@@ -86,11 +124,12 @@ exports.uploadToBunnyCDN =async (filePath, fileName, options={}) =>{
             visibility: options.visibility || "public",
             url,
         });
-        return { url, file: saved };;
+
+        return { url, file: saved };
     } catch (error) {
         throw new Error(`BunnyCDN Upload Failed: ${error.message}`);
     }
-}
+};
 
 /**
  * Handle thumbnail upload
@@ -108,7 +147,6 @@ exports.handleThumbnailUpload = async (thumbnail, fileName, userId = 'anonymous'
         }
   
         // Create unique file path
-        const uniqueDate = Date.now(); // more unique than just milliseconds
         const rawFileName = `thumb_${fileName}`;
         const thumbPath = path.join(uploadDir, rawFileName);
   
@@ -118,7 +156,7 @@ exports.handleThumbnailUpload = async (thumbnail, fileName, userId = 'anonymous'
         // Upload to BunnyCDN
         const thumbUrl = await exports.uploadToBunnyCDN(
             thumbPath,
-            `thumb_${fileName}_${uniqueDate}`, 
+            fileName, 
             { 
                 type: 'thumbnail',
                 userId,

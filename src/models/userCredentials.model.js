@@ -2,11 +2,11 @@ const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
 const config = require('../../config');
 const utils = require('../utils');
+const auditPlugin = require('./plugins/audit.plugin');
 
 const userCredentialsSchema = new mongoose.Schema({
     _id: {
         type: String,
-        default: null
     },
     username: {
         type: String,
@@ -65,6 +65,10 @@ const userCredentialsSchema = new mongoose.Schema({
     lockUntil: {
         type: Date,
         default: null
+    },
+    emailVerificationExpires: {
+        type: Date,
+        default: null
     }
 }, {
     timestamps: true,
@@ -81,16 +85,14 @@ userCredentialsSchema.pre('validate', async function(next) {
 
 // Hash password before saving
 userCredentialsSchema.pre('save', async function(next) {
-    if (!this.isModified('password')) return next();
-    
-    try {
-        const salt = await bcrypt.genSalt(config.authentication.salt_rounds);
-        this.password = await bcrypt.hash(this.password, salt);
-        next();
-    } catch (error) {
-        next(error);
+    if (this.isModified('password')) {
+        this.password = await bcrypt.hash(this.password, config.authentication.salt_rounds);
     }
+    next();
 });
+
+// Apply audit plugin
+userCredentialsSchema.plugin(auditPlugin, { resourceType: 'USER' });
 
 // Method to compare password
 userCredentialsSchema.methods.comparePassword = async function(candidatePassword) {

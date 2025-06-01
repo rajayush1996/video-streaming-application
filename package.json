@@ -9,14 +9,17 @@
     "test": "jest",
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
-    "start-all": "npm-run-all --parallel start swagger"
+    "start-all": "npm-run-all --parallel start swagger", 
+    "build": "node build"
   },
   "dependencies": {
     "amqplib": "^0.10.5",
+    "async_hooks": "^1.0.0",
     "axios": "^1.8.2",
     "bcryptjs": "^2.4.3",
     "chai": "^4.3.10",
     "child_process": "^1.0.2",
+    "compression": "^1.8.0",
     "config": "^3.3.9",
     "cookie-parser": "~1.4.4",
     "cors": "^2.8.5",

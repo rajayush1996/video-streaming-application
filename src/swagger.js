@@ -1,7 +1,14 @@
 const swaggerAutogen = require('swagger-autogen')();
 const outputFile = './swagger_output.json';
-const endpointsFiles = ['./app.js'];
-const config = require('../config/config');
+const endpointsFiles = [
+    './src/app.js',
+    './src/routes/*.js',
+    './src/routes/**/*.js',
+    './src/routes/v1/*.js',
+    './src/routes/admin/*.js',
+    './src/routes/user/*.js'
+];
+// const config = require('../config/config');
 const metadata = require('./swaggerMetaData.json');
 
 const doc = {
@@ -9,11 +16,22 @@ const doc = {
         title: 'vsa API',
         description: 'Automatically generated API documentation',
     },
-    host: `${config.env.vsa_host}:${config.env.port}`,
+    host: 'localhost:5000',
     schemes: ['http'],
     paths: {}, // Ensure paths is initialized
+    components: {
+        securitySchemes: {
+            bearerAuth: {
+                type: 'http',
+                scheme: 'bearer',
+                bearerFormat: 'JWT'
+            }
+        }
+    },
+    security: [{
+        bearerAuth: []
+    }]
 };
-
 
 function injectSwaggerMetadata(doc, metadata) {
     for (const path in metadata) {
@@ -37,5 +55,5 @@ function injectSwaggerMetadata(doc, metadata) {
 injectSwaggerMetadata(doc, metadata);
 
 swaggerAutogen(outputFile, endpointsFiles, doc).then(() => {
-    require('./app.js', './routes/*.js');
+    require('./app.js');
 });

@@ -1,13 +1,34 @@
 const mongoose = require('mongoose');
 const { toJSON, paginate } = require('./plugins');
+const auditPlugin = require('./plugins/audit.plugin');
+const utils = require('../utils');
 
 const categorySchema = new mongoose.Schema({
     name: { type: String, required: true, trim: true },
     type: { type: String, enum: ['videos', 'blogs', 'reels'], required: true },
-    parentId: { type: mongoose.Schema.Types.ObjectId, ref: 'Category', default: null },
-}, { timestamps: true });
+    parentId: { type: String, ref: 'Category', default: null },
+}, { 
+    timestamps: true,
+    _id: false // Disable auto _id generation
+});
+
+// Generate UUID with prefix before saving
+categorySchema.pre('validate', async function(next) {
+    if (!this._id) {
+        this._id = utils.uuid('c-');
+    }
+    next();
+});
 
 categorySchema.plugin(toJSON);
 categorySchema.plugin(paginate);
+categorySchema.plugin(auditPlugin, { resourceType: 'CATEGORY' });
 
-module.exports = mongoose.model('Category', categorySchema);
+// Indexes
+categorySchema.index({ name: 1, type: 1 }, { unique: true });
+categorySchema.index({ parentId: 1 });
+categorySchema.index({ type: 1 });
+
+const Category = mongoose.model('Category', categorySchema);
+
+module.exports = Category;

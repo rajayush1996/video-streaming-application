@@ -1,10 +1,12 @@
+const httpStatus = require('http-status');
+const { ApiError } = require('../features/error');
+const logger = require('../features/logger');
 const MediaMeta = require('../models/mediaMeta.model');
 const Blog = require('../models/blog.model');
 const UserCredentials = require('../models/userCredentials.model');
 const File = require('../models/file.model');
-const logger = require('../features/logger');
-const { ApiError } = require('../features/error');
-const httpStatus = require('http-status');
+const Video = require('../models/video.model');
+const Reel = require('../models/reel.model');
 
 class DashboardService {
     /**
@@ -14,10 +16,11 @@ class DashboardService {
     async getOverviewMetrics() {
         try {
             // Use Promise.all to run all queries in parallel
-            const [videosCount, blogsCount, usersCount] = await Promise.all([
-                MediaMeta.countDocuments({ isDeleted: false }),
-                Blog.countDocuments({ deletedAt: null }),
-                UserCredentials.countDocuments({ status: 'active' })
+            const [videosCount, blogsCount, usersCount, reelsCount] = await Promise.all([
+                Video.countDocuments({ isDeleted: false }),
+                Blog.countDocuments({ isDeleted: false }),
+                UserCredentials.countDocuments({ status: 'active' }),
+                Reel.countDocuments({ isDeleted: false })
             ]);
 
             // Get total views using the new views field
@@ -31,6 +34,7 @@ class DashboardService {
             return {
                 videosCount,
                 blogsCount,
+                reelsCount,
                 totalViews,
                 usersCount
             };
@@ -48,73 +52,81 @@ class DashboardService {
     async getRecentActivities(limit = 10) {
         try {
             // Get recent videos
-            const recentVideos = await MediaMeta.find({ isDeleted: false })
+            const recentVideos = await Video.find({ isDeleted: false })
                 .sort({ createdAt: -1 })
                 .limit(limit)
+                .populate('userId', 'username email')
                 .lean();
             
             // Get recent blogs
-            const recentBlogs = await Blog.find({ deletedAt: null })
+            const recentBlogs = await Blog.find({ isDeleted: false })
                 .sort({ createdAt: -1 })
                 .limit(limit)
-                .populate('admin', 'username email')
+                .populate('userId', 'username email')
+                .lean();
+
+            // Get recent reels
+            const recentReels = await Reel.find({ isDeleted: false })
+                .sort({ createdAt: -1 })
+                .limit(limit)
+                .populate('userId', 'username email')
                 .lean();
             
-            
-            // Get all unique user IDs from videos
-            const userIds = recentVideos
-                .filter(video => video.userId)
-                .map(video => video.userId);
-            
-            // Fetch all users in one query using string IDs
-            const users = userIds.length > 0 
-                ? await UserCredentials.find({ _id: { $in: userIds } })
-                    .select('username email')
-                    .lean()
-                : [];
-            
-            // Create a map for quick user lookup using string IDs
-            const userMap = {};
-            users.forEach(user => {
-                userMap[user._id] = user;
-            });
-            
-            // Combine and format activities
-            const combinedActivities = [
-                ...recentVideos.map(video => {
-                    // Look up user from the map using string ID
-                    const user = video.userId ? userMap[video.userId] : null;
-                    
-                    return {
-                        time: video.createdAt,
-                        action: 'uploaded',
-                        resourceType: 'video',
-                        resourceId: video._id,
-                        resourceName: video.title || 'Untitled Video',
-                        user: user 
-                            ? user.username || user.email
-                            : 'Unknown'
-                    };
-                }),
-                ...recentBlogs.map(blog => ({
-                    time: blog.createdAt,
-                    action: blog.publishedAt ? 'published' : 'drafted',
-                    resourceType: 'blog',
-                    resourceId: blog._id,
-                    resourceName: blog.title || 'Untitled Blog',
-                    user: blog.admin ? 
-                        blog.admin.username || blog.admin.email : 
-                        'Unknown'
-                }))
-            ];
-            
-            // Sort by time (most recent first)
-            combinedActivities.sort((a, b) => new Date(b.time) - new Date(a.time));
-            
-            // Return only the requested number of activities
-            return combinedActivities.slice(0, limit);
+            // Format video activities
+            const videoActivities = recentVideos.map(video => ({
+                time: video.createdAt,
+                action: 'upload',
+                resourceType: 'video',
+                resourceId: video._id,
+                resourceName: video.title,
+                user: video.userId ? 
+                    (video.userId.username || video.userId.email) : 
+                    'Unknown User',
+                details: {
+                    status: video.status,
+                    type: video.type
+                }
+            }));
+
+            // Format blog activities
+            const blogActivities = recentBlogs.map(blog => ({
+                time: blog.createdAt,
+                action: 'create',
+                resourceType: 'blog',
+                resourceId: blog._id,
+                resourceName: blog.title,
+                user: blog.userId ? 
+                    (blog.userId.username || blog.userId.email) : 
+                    'Unknown User',
+                details: {
+                    status: blog.status
+                }
+            }));
+
+            // Format reel activities
+            const reelActivities = recentReels.map(reel => ({
+                time: reel.createdAt,
+                action: 'upload',
+                resourceType: 'reel',
+                resourceId: reel._id,
+                resourceName: reel.title,
+                user: reel.userId ? 
+                    (reel.userId.username || reel.userId.email) : 
+                    'Unknown User',
+                details: {
+                    status: reel.status,
+                    type: reel.type
+                }
+            }));
+
+            // Combine and sort all activities
+            const allActivities = [...videoActivities, ...blogActivities, ...reelActivities]
+                .sort((a, b) => b.time - a.time)
+                .slice(0, limit);
+
+            return allActivities;
         } catch (error) {
-            logger.error('Error getting recent activities:', error);
+            logger.error('Error in getRecentActivities:', error);
             throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, 'Error fetching recent activities');
         }
     }
@@ -132,12 +144,11 @@ class DashboardService {
             
             const storageUsed = storageAggregate.length > 0 ? storageAggregate[0].totalSize : 0;
             
-            // For this example, let's assume:
-            // - Videos with null or empty status need moderation
-            // - Blogs with status='draft' need review
-            const [pendingVideos, pendingBlogs] = await Promise.all([
-                MediaMeta.countDocuments({ isDeleted: false, status: { $in: [null, '', 'pending'] } }),
-                Blog.countDocuments({ deletedAt: null, status: 'draft' })
+            // Get pending content counts
+            const [pendingVideos, pendingBlogs, pendingReels] = await Promise.all([
+                Video.countDocuments({ isDeleted: false, status: { $in: [null, '', 'pending'] } }),
+                Blog.countDocuments({ isDeleted: false, status: 'draft' }),
+                Reel.countDocuments({ isDeleted: false, status: { $in: [null, '', 'pending'] } })
             ]);
             
             // For storage capacity, this would typically come from a config or settings table
@@ -153,12 +164,44 @@ class DashboardService {
                 moderation: {
                     pendingVideos,
                     pendingBlogs,
-                    totalPending: pendingVideos + pendingBlogs
+                    pendingReels,
+                    totalPending: pendingVideos + pendingBlogs + pendingReels
                 }
             };
         } catch (error) {
             logger.error('Error getting system status:', error);
             throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, 'Error fetching system status');
+        }
+    }
+
+    /**
+     * Helper method to get resource name from audit log
+     * @param {Object} log - Audit log object
+     * @returns {string} Resource name
+     */
+    getResourceNameFromAuditLog(log) {
+        if (!log.details) return 'Unknown Resource';
+
+        const resource = log.details.after || log.details.before;
+        if (!resource) return 'Unknown Resource';
+
+        switch (log.resourceType) {
+        case 'USER':
+            return resource.username || resource.email || 'User';
+        case 'BLOG':
+            return resource.title || 'Untitled Blog';
+        case 'MEDIA_METADATA':
+            return resource.title || 'Untitled Media';
+        case 'CATEGORY':
+            return resource.name || 'Unnamed Category';
+        case 'NOTIFICATION':
+            return resource.title || 'Notification';
+        case 'PINNED_POST':
+            return 'Pinned Post';
+        case 'USER_PROFILE':
+            return resource.displayName || 'User Profile';
+        default:
+            return 'Unknown Resource';
         }
     }
 }

@@ -6,9 +6,15 @@ const { formatApiResult } = require("../utils/formatApiResult.util");
 const { ApiError } = require("../features/error");
 const httpStatus = require("http-status");
 const socketService = require("./socket.service");
+const eventBus = require("./eventBus.service");
+const Video = require('../models/video.model');
+const Reel = require('../models/reel.model');
+const logger = require('../features/logger');
+const utils = require('../utils');
 
 class MediaMetaService {
     async createMediaMetaInfo(metaInfo, isAdmin = false) {
+        console.log("🚀 ~ MediaMetaService ~ createMediaMetaInfo ~ metaInfo:", metaInfo);
         try {
             const defaultMetaInfo = {
                 ...metaInfo,
@@ -19,14 +25,63 @@ class MediaMetaService {
 
             const mediaMeta = await MediaMeta.create(defaultMetaInfo);
             
+            // Create corresponding content based on mediaType
+            let content;
+            if (metaInfo.mediaType === 'video') {
+                content = await Video.create({
+                    _id: utils.uuid('v-'),
+                    title: metaInfo.title,
+                    description: metaInfo.description,
+                    author: metaInfo.userId,
+                    category: metaInfo.category,
+                    status: 'published',
+                    type: 'video',
+                    videoSpecific: {
+                        mediaMetaId: mediaMeta._id,
+                        duration: metaInfo.metadata?.duration || '00:00:00'
+                    }
+                });
+            } else if (metaInfo.mediaType === 'reel') {
+                content = await Reel.create({
+                    _id: utils.uuid('r-'),
+                    title: metaInfo.title,
+                    description: metaInfo.description,
+                    author: metaInfo.userId,
+                    category: metaInfo.category,
+                    status: 'published',
+                    type: 'reel',
+                    reelSpecific: {
+                        description: metaInfo.description,
+                        duration: metaInfo.metadata?.duration || '00:00:00',
+                        mediaMetaId: mediaMeta._id
+                    }
+                });
+            }
+            
             // Enhance with category details
             const enhanced = await this.enhanceWithCategoryDetails([mediaMeta.toObject()]);
             
             if (!isAdmin) {
-                socketService.notifyNewContent(mediaMeta);
+                // Notify admins about new media upload
+                socketService.notifyMediaUpload(mediaMeta);
+                
+                // Notify user about upload status
+                socketService.notifyMediaStatus(
+                    mediaMeta.userId,
+                    mediaMeta._id,
+                    'pending',
+                    {
+                        title: mediaMeta.title,
+                        type: mediaMeta.type,
+                        message: 'Your media has been uploaded and is pending approval'
+                    }
+                );
             }
 
-            return enhanced[0];
+            return {
+                ...enhanced[0],
+                content
+            };
         } catch (error) {
             throw error;
         }
@@ -50,6 +105,7 @@ class MediaMetaService {
                 limit = 10,
                 sortBy = "createdAt:desc",
                 category,
+                type,
                 ...otherOptions
             } = options;
 
@@ -59,10 +115,17 @@ class MediaMetaService {
             delete filter.limit;
             delete filter.sortBy;
             delete filter.category;
+            delete filter.type;
 
             // 3) Default isDeleted to false, if not provided:
             if (filter.isDeleted === undefined) {
                 filter.isDeleted = false;
+            }
+
+            if (type === 'video') {
+                filter.mediaType = 'video';
+            } else if (type === 'reel') {
+                filter.mediaType = 'reel';
             }
 
             // 4) Apply category logic:
@@ -90,6 +153,34 @@ class MediaMetaService {
                 result.results = formatApiResult(plain);
                 result.results = await this.enhanceWithFileUrls(result.results);
                 result.results = await this.enhanceWithCategoryDetails(result.results);
+
+                // Merge with video/reel data based on type
+                if (type === 'video') {
+                    const videoIds = result.results.map(item => item._id);
+                    const videos = await Video.find({ 'videoSpecific.mediaMetaId': { $in: videoIds } })
+                        .select('videoSpecific.duration views')
+                        .lean();
+                    
+                    const videoMap = new Map(videos.map(v => [v.videoSpecific.mediaMetaId, v]));
+                    console.log("🚀 ~ MediaMetaService ~ getMediaMetadata ~ videoMap:", videoMap);
+                    result.results = result.results.map(item => ({
+                        ...item,
+                        duration: videoMap.get(item._id)?.videoSpecific?.duration || '00:00:00',
+                        totalViews: (item.views || 0) + (videoMap.get(item._id)?.views || 0)
+                    }));
+                } else if (type === 'reel') {
+                    const reelIds = result.results.map(item => item._id);
+                    const reels = await Reel.find({ 'reelSpecific.mediaMetaId': { $in: reelIds } })
+                        .select('reelSpecific.duration views')
+                        .lean();
+                    
+                    const reelMap = new Map(reels.map(r => [r.reelSpecific.mediaMetaId, r]));
+                    result.results = result.results.map(item => ({
+                        ...item,
+                        duration: reelMap.get(item._id)?.reelSpecific?.duration || '00:00:00',
+                        totalViews: (item.views || 0) + (reelMap.get(item._id)?.views || 0)
+                    }));
+                }
             }
 
             return result;
@@ -362,11 +453,34 @@ class MediaMetaService {
         await mediaMeta.save();
 
         // Notify user about content approval
-        socketService.notifyContentStatus(
+        socketService.notifyMediaStatus(
             mediaMeta.userId,
-            id,
-            "approved",
-            mediaMeta
+            mediaMeta._id,
+            'approved',
+            {
+                title: mediaMeta.title,
+                type: mediaMeta.type,
+                message: 'Your media has been approved'
+            }
+        );
+
+        // Publish event to event bus for advanced notification processing
+        await eventBus.publish(
+            'content.approved',
+            {
+                contentId: mediaMeta._id.toString(),
+                contentTitle: mediaMeta.title,
+                contentType: mediaMeta.type,
+                sender: adminId,
+                thumbnailUrl: mediaMeta.thumbnailUrl,
+                userId: mediaMeta.userId,
+                status: 'approved'
+            },
+            {
+                priority: 'high',
+                targetUsers: [mediaMeta.userId],
+                publisher: 'media-service'
+            }
         );
 
         return mediaMeta;
@@ -387,11 +501,15 @@ class MediaMetaService {
         await mediaMeta.save();
 
         // Notify user about content rejection
-        socketService.notifyContentStatus(
+        socketService.notifyMediaStatus(
             mediaMeta.userId,
-            id,
-            "rejected",
-            mediaMeta
+            mediaMeta._id,
+            'rejected',
+            {
+                title: mediaMeta.title,
+                type: mediaMeta.type,
+                message: `Your media has been rejected${rejectionReason ? `: ${rejectionReason}` : ''}`
+            }
         );
 
         return mediaMeta;
@@ -424,7 +542,7 @@ class MediaMetaService {
             }
             
             // Fetch all categories in one query
-            const categories = await Category.find({ _id: { $in: categoryIds } });
+            const categories = await Category.find({ _id: { $in: categoryIds } }).lean();
             
             // Create a map for quick lookup
             const categoryMap = {};
@@ -449,6 +567,85 @@ class MediaMetaService {
             console.error("Error enhancing with category details:", error);
             return mediaMetadata;
         }
+    }
+
+    async createMediaMeta(mediaMetaBody) {
+        try {
+            // Create MediaMeta record
+            const mediaMeta = await MediaMeta.create({
+                ...mediaMetaBody,
+                _id: utils.uuid('me-')
+            });
+
+            // Create corresponding content based on mediaType
+            let content;
+            if (mediaMetaBody.mediaType === 'video') {
+                content = await Video.create({
+                    _id: utils.uuid('v-'),
+                    title: mediaMetaBody.title,
+                    description: mediaMetaBody.description,
+                    author: mediaMetaBody.userId,
+                    category: mediaMetaBody.category,
+                    videoSpecific: {
+                        mediaMetaId: mediaMeta._id,
+                        duration: mediaMetaBody.metadata?.duration || '00:00:00'
+                    }
+                });
+            } else if (mediaMetaBody.mediaType === 'reel') {
+                content = await Reel.create({
+                    _id: utils.uuid('r-'),
+                    title: mediaMetaBody.title,
+                    description: mediaMetaBody.description,
+                    author: mediaMetaBody.userId,
+                    category: mediaMetaBody.category,
+                    reelSpecific: {
+                        description: mediaMetaBody.description,
+                        duration: mediaMetaBody.metadata?.duration || '00:00:00',
+                        mediaMetaId: mediaMeta._id
+                    }
+                });
+            }
+
+            return {
+                mediaMeta,
+                content
+            };
+        } catch (error) {
+            logger.error('Error creating media metadata:', error);
+            throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, 'Error creating media metadata');
+        }
+    }
+
+    async getMediaMetaById(id) {
+        const mediaMeta = await MediaMeta.findById(id);
+        if (!mediaMeta) {
+            throw new ApiError(httpStatus.NOT_FOUND, 'Media metadata not found');
+        }
+        return mediaMeta;
+    }
+
+    async getAllMediaMeta(filter, options) {
+        const mediaMeta = await MediaMeta.paginate(filter, options);
+        return mediaMeta;
+    }
+
+    async updateMediaMetaById(id, updateBody) {
+        const mediaMeta = await MediaMeta.findById(id);
+        if (!mediaMeta) {
+            throw new ApiError(httpStatus.NOT_FOUND, 'Media metadata not found');
+        }
+        Object.assign(mediaMeta, updateBody);
+        await mediaMeta.save();
+        return mediaMeta;
+    }
+
+    async deleteMediaMetaById(id) {
+        const mediaMeta = await MediaMeta.findById(id);
+        if (!mediaMeta) {
+            throw new ApiError(httpStatus.NOT_FOUND, 'Media metadata not found');
+        }
+        await mediaMeta.remove();
+        return mediaMeta;
     }
 }
 

@@ -107,12 +107,13 @@ if (error) {
 
 const configuration = {
     env: {
-        app_host: process.env.APP_HOST || envVars.APP_HOST,
+        app_host: process.env.APP_HOST || envVars.ENV.APP_HOST,
         vsa_host: process.env.VSA_HOST || envVars.ENV.VSA_HOST,
-        webhook_host: process.env.WEBHOOK_HOST || envVars.WEBHOOK_HOST,
-        port: process.env.PORT || envVars.PORT,
-        environment: process.env.ENVIRONMENT || envVars.ENVIRONMENT,
-        client_url: process.env.CLIENT_URL || envVars.ENV.CLIENT_URL
+        webhook_host: process.env.WEBHOOK_HOST || envVars.ENV.WEBHOOK_HOST,
+        port: process.env.PORT || envVars.ENV.PORT,
+        environment: process.env.ENVIRONMENT || envVars.ENV.ENVIRONMENT,
+        client_url: process.env.CLIENT_URL || envVars.ENV.CLIENT_URL,
+        server_url: process.env.SERVER_URL || envVars.ENV.SERVER_URL
     },
     database: {
         type: process.env.DATABASE_TYPE || envVars.DATABASE.TYPE,
