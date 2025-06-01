@@ -55,9 +55,7 @@ app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 
 const allowedOrigins = [
-    'http://localhost:3000',
-    'http://localhost:8080',
-    'https://your-production-domain.com',
+    config.env.client_url,
 ];
 app.use(cors({
     origin: allowedOrigins,
