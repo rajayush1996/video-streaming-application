@@ -93,7 +93,7 @@ router.put(
 );
 
 // Creator routes (require auth and creator status)
-router.use(auth('uploadContent'));
+// router.use(auth('uploadContent'));
 router.use(isCreator);
 
 /**

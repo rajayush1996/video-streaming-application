@@ -44,7 +44,7 @@ const profileController = require('../../controllers/profile.controller');
  *       404:
  *         description: User not found
  */
-router.get('/me', auth('getUser'), userController.getUserById);
+router.get('/me', userController.getUserById);
 
 /**
  * @swagger
@@ -77,7 +77,7 @@ router.get('/me', auth('getUser'), userController.getUserById);
  *       404:
  *         description: User not found
  */
-router.put('/me', auth('updateUser'), validate(updateProfileSchema), userController.updateUser);
+router.put('/me', validate(updateProfileSchema), userController.updateUser);
 
 /**
  * @swagger
@@ -105,7 +105,7 @@ router.put('/me', auth('updateUser'), validate(updateProfileSchema), userControl
  *       401:
  *         description: Unauthorized
  */
-router.post('/avatar', auth('updateProfile'), profileController.uploadAvatar);
+router.post('/avatar', profileController.uploadAvatar);
 
 /**
  * @swagger
@@ -133,7 +133,7 @@ router.post('/avatar', auth('updateProfile'), profileController.uploadAvatar);
  *       401:
  *         description: Unauthorized
  */
-router.post('/cover', auth('updateProfile'), profileController.uploadCoverImage);
+router.post('/cover', profileController.uploadCoverImage);
 
 /**
  * @swagger
@@ -159,7 +159,7 @@ router.post('/cover', auth('updateProfile'), profileController.uploadCoverImage)
  *       404:
  *         description: User not found
  */
-router.delete('/:userId', auth('deleteUser'), userController.deleteUser);
+router.delete('/:userId', userController.deleteUser);
 
 /**
  * @swagger
@@ -231,7 +231,7 @@ router.get('/:id', userController.getPublicProfile);
  *       404:
  *         description: User not found
  */
-router.post('/:id/follow', auth('followUser'), userController.followUser);
+router.post('/:id/follow', userController.followUser);
 
 /**
  * @swagger
@@ -255,7 +255,7 @@ router.post('/:id/follow', auth('followUser'), userController.followUser);
  *       404:
  *         description: User not found
  */
-router.post('/:id/unfollow', auth('followUser'), userController.unfollowUser);
+router.post('/:id/unfollow', userController.unfollowUser);
 
 /**
  * @swagger
@@ -342,6 +342,6 @@ router.get('/:id/following', userController.getFollowing);
  *       401:
  *         description: Unauthorized
  */
-router.get('/feed', auth('getUser'), userController.getUserFeed);
+router.get('/feed', userController.getUserFeed);
 
 module.exports = router;

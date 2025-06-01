@@ -164,7 +164,7 @@ router.get('/:id', auth('getCreatorRequests'), creatorRequestController.getReque
  *         description: Creator request not found
  */
 router.patch('/:id/status', 
-    auth('updateCreatorRequest'), 
+    // auth('updateCreatorRequest'), 
     validate(creatorRequestValidation.updateCreatorRequestSchema), 
     creatorRequestController.updateRequestStatus
 );

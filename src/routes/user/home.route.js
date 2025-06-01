@@ -40,7 +40,7 @@ const homeController = require('../../controllers/home.controller');
  */
 router.get(
     '/',
-    auth('getUser'),
+    // auth('getUser'),
     // validate(homeValidation.getHomeSchema),
     homeController.getHomeFeed
 );

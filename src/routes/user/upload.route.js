@@ -6,7 +6,7 @@ const uploadController = require('../../controllers/upload.controller');
 const router = express.Router();
 
 // All upload routes require authentication and creator status
-router.use(auth('uploadContent'));
+// router.use(auth('uploadContent'));
 router.use(isCreator);
 
 /**
