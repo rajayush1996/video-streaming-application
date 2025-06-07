@@ -54,16 +54,9 @@ app.use(express.urlencoded({ extended: true }));
 
 app.use(cookieParser());
 
-const allowedOrigins = [
-    config.env.client_url,
-    config.env.admin_url,
-    'https://lust-hub.netlify.app',
-    'https://video-streaming-lusty.netlify.app'
-];
-
 // CORS configuration
 app.use(cors({
-    origin: allowedOrigins,
+    origin: '*',
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization']
