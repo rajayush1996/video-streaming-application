@@ -62,8 +62,25 @@ app.use(cookieParser());
 //     allowedHeaders: ['Content-Type', 'Authorization']
 // }));
 
+const allowedOrigins = [
+    'https://lust-hub.netlify.app',
+    'https://admin.lustyhub.com',
+    'https://video-streaming-lusty.netlify.app',
+    'https://lustyhub.com',
+    'https://cool-sorbet-889dc8.netlify.app',
+    'https://desi-bhabhi.netlify.app',
+    'https://admin-desibhabhi.netlify.app',
+];
+
 app.use(cors({
-    origin: '*', // For public APIs without credentials
+    origin: function (origin, callback) {
+        if (!origin || allowedOrigins.includes(origin)) {
+            callback(null, true);
+        } else {
+            callback(new Error('Not allowed by CORS'));
+        }
+    },
+    credentials: true, // Required if you're using cookies/auth headers
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],
 }));
