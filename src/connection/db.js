@@ -33,7 +33,7 @@ const connectDB = async () => {
             useNewUrlParser: true,
             useUnifiedTopology: true,
         });
-        if (config.debug_mongoose) {
+        if (config.debug_mongoose !== "false") {
             mongoose.set("debug", true);
         }
         logger.info("db connected");
