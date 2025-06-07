@@ -70,6 +70,8 @@ const allowedOrigins = [
     'https://cool-sorbet-889dc8.netlify.app',
     'https://desi-bhabhi.netlify.app',
     'https://admin-desibhabhi.netlify.app',
+    // 'http://localhost:8080',
+    // 'http://localhost:3000',
 ];
 
 app.use(cors({

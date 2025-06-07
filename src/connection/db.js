@@ -38,7 +38,7 @@ const connectDB = async () => {
         }
         logger.info("db connected");
         await seedEmailProviders();
-        // loadQueues();
+        loadQueues();
     } catch (err) {
         logger.error("db error", err);
     }
