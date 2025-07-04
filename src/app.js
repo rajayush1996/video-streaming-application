@@ -70,8 +70,8 @@ const allowedOrigins = [
     'https://cool-sorbet-889dc8.netlify.app',
     'https://desi-bhabhi.netlify.app',
     'https://admin-desibhabhi.netlify.app',
-    // 'http://localhost:8080',
-    // 'http://localhost:3000',
+    'http://localhost:8080',
+    'http://localhost:3000',
 ];
 
 app.use(cors({
@@ -87,6 +87,10 @@ app.use(cors({
     allowedHeaders: ['Content-Type', 'Authorization'],
 }));
 // app.options('*', cors());
+
+// const __filename = fileURLToPath(import.meta.url);
+// const __dirname = path.dirname(__filename);
+
 
 app.use(express.static(path.join(__dirname, 'public')));
 
@@ -115,6 +119,17 @@ app.get('/api/v1/health', (req, res) => {
 });
 
 // All routes are handled through the main routes index
+app.use('/uploads', cors({
+  origin: function (origin, callback) {
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
+  credentials: true,
+}), express.static(path.join(__dirname, '../uploads')));
+
 app.use('/api/v1', v1Routes);
 app.use('/api/v1/interactions', interactionRoute);
 

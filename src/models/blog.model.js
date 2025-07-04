@@ -31,6 +31,11 @@ const blogSchema = new mongoose.Schema({
         date: {
             type: Date,
             default: Date.now
+        },
+        mediaMetaId: {
+            type: String,
+            ref: 'MediaMeta',
+            required: false
         }
     }
 }, {

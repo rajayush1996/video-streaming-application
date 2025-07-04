@@ -12,7 +12,6 @@ class CreatorRequestService {
      * @returns {Promise<Object>}
      */
     async createRequest(requestBody) {
-        console.log("🚀 ~ CreatorRequestService ~ createRequest ~ requestBody:", requestBody);
         try {
             // Check if user already has a pending request
             const existingRequest = await CreatorRequest.findOne({

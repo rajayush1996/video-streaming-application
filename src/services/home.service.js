@@ -7,6 +7,7 @@ const MediaMeta = require('../models/mediaMeta.model');
 const logger = require('../features/logger');
 const UserCredential = require('../models/userCredentials.model');
 const Category = require('../models/category.model');
+const fileModel = require('../models/file.model');
 
 /**
  * Get home feed with mixed content
@@ -32,84 +33,156 @@ exports.getHomeFeed = async (options) => {
             Blog.find({ ...query })
                 .sort({ createdAt: -1 })
                 .limit(5)
-                .select('_id title description status isFeatured isTrending viewCount likeCount commentCount createdAt updatedAt user category thumbnailMetadata contentMetadata')
+                // .select('_id title description status isFeatured isTrending viewCount likeCount commentCount createdAt updatedAt user category thumbnailMetadata contentMetadata')
                 .lean(),
             Video.find({ ...query })
                 .sort({ createdAt: -1 })
                 .limit(5)
-                .select('_id title description status isFeatured isTrending viewCount likeCount commentCount createdAt updatedAt user category thumbnailMetadata contentMetadata')
+                // .select('_id title description status isFeatured isTrending viewCount likeCount commentCount createdAt updatedAt user category thumbnailMetadata contentMetadata')
                 .lean(),
             Reel.find({ ...query })
                 .sort({ createdAt: -1 })
                 .limit(5)
-                .select('_id title description status isFeatured isTrending viewCount likeCount commentCount createdAt updatedAt user category thumbnailMetadata contentMetadata')
-                .lean()
-        ]);
-        console.log("🚀 ~ exports.getHomeFeed= ~ featuredReels:", featuredReels)
-        console.log("🚀 ~ exports.getHomeFeed= ~ featuredVideos:", featuredVideos)
-        console.log("🚀 ~ exports.getHomeFeed= ~ featuredBlogs:", featuredBlogs)
-
-        const [trendingBlogs, trendingVideos, trendingReels] = await Promise.all([
-            Blog.find({ ...query, isTrending: true })
-                .sort({ viewCount: -1 })
-                .limit(5)
-                .select('_id title description status isFeatured isTrending viewCount likeCount commentCount createdAt updatedAt user category thumbnailMetadata contentMetadata')
-                .lean(),
-            Video.find({ ...query, isTrending: true })
-                .sort({ viewCount: -1 })
-                .limit(5)
-                .select('_id title description status isFeatured isTrending viewCount likeCount commentCount createdAt updatedAt user category thumbnailMetadata contentMetadata')
-                .lean(),
-            Reel.find({ ...query, isTrending: true })
-                .sort({ viewCount: -1 })
-                .limit(5)
-                .select('_id title description status isFeatured isTrending viewCount likeCount commentCount createdAt updatedAt user category thumbnailMetadata contentMetadata')
+                // .select('_id title description status isFeatured isTrending viewCount likeCount commentCount createdAt updatedAt user category thumbnailMetadata contentMetadata')
                 .lean()
         ]);
 
-        const [latestBlogs, latestVideos, latestReels] = await Promise.all([
-            Blog.find(query)
-                .sort({ createdAt: -1 })
-                .skip(skip)
-                .limit(limit)
-                .select('_id title description status isFeatured isTrending viewCount likeCount commentCount createdAt updatedAt user category thumbnailMetadata contentMetadata')
-                .lean(),
-            Video.find(query)
-                .sort({ createdAt: -1 })
-                .skip(skip)
-                .limit(limit)
-                .select('_id title description status isFeatured isTrending viewCount likeCount commentCount createdAt updatedAt user category thumbnailMetadata contentMetadata')
-                .lean(),
-            Reel.find(query)
-                .sort({ createdAt: -1 })
-                .skip(skip)
-                .limit(limit)
-                .select('_id title description status isFeatured isTrending viewCount likeCount commentCount createdAt updatedAt user category thumbnailMetadata contentMetadata')
-                .lean()
-        ]);
+        // const [trendingBlogs, trendingVideos, trendingReels] = await Promise.all([
+        //     Blog.find({ ...query, isTrending: true })
+        //         .sort({ viewCount: -1 })
+        //         .limit(5)
+        //         .select('_id title description status isFeatured isTrending viewCount likeCount commentCount createdAt updatedAt user category thumbnailMetadata contentMetadata')
+        //         .lean(),
+        //     Video.find({ ...query, isTrending: true })
+        //         .sort({ viewCount: -1 })
+        //         .limit(5)
+        //         .select('_id title description status isFeatured isTrending viewCount likeCount commentCount createdAt updatedAt user category thumbnailMetadata contentMetadata')
+        //         .lean(),
+        //     Reel.find({ ...query, isTrending: true })
+        //         .sort({ viewCount: -1 })
+        //         .limit(5)
+        //         .select('_id title description status isFeatured isTrending viewCount likeCount commentCount createdAt updatedAt user category thumbnailMetadata contentMetadata')
+        //         .lean()
+        // ]);
+
+        // const [latestBlogs, latestVideos, latestReels] = await Promise.all([
+        //     Blog.find(query)
+        //         .sort({ createdAt: -1 })
+        //         .skip(skip)
+        //         .limit(limit)
+        //         .select('_id title description status isFeatured isTrending viewCount likeCount commentCount createdAt updatedAt user category thumbnailMetadata contentMetadata')
+        //         .lean(),
+        //     Video.find(query)
+        //         .sort({ createdAt: -1 })
+        //         .skip(skip)
+        //         .limit(limit)
+        //         .select('_id title description status isFeatured isTrending viewCount likeCount commentCount createdAt updatedAt user category thumbnailMetadata contentMetadata')
+        //         .lean(),
+        //     Reel.find(query)
+        //         .sort({ createdAt: -1 })
+        //         .skip(skip)
+        //         .limit(limit)
+        //         .select('_id title description status isFeatured isTrending viewCount likeCount commentCount createdAt updatedAt user category thumbnailMetadata contentMetadata')
+        //         .lean()
+        // ]);
 
         // Collect all MediaMeta IDs
         const mediaMetaIds = new Set();
-        [...featuredBlogs, ...featuredVideos, ...featuredReels,
-            ...trendingBlogs, ...trendingVideos, ...trendingReels,
-            ...latestBlogs, ...latestVideos, ...latestReels].forEach(item => {
-            if (item.thumbnailMetadata) mediaMetaIds.add(item.thumbnailMetadata);
-            if (item.contentMetadata) mediaMetaIds.add(item.contentMetadata);
+        featuredReels.forEach(item => {
+            mediaMetaIds.add(item?.reelSpecific?.mediaMetaId);
+        })
+
+        featuredVideos.forEach(item => {
+            mediaMetaIds.add(item?.videoSpecific?.mediaMetaId);
+        });
+
+        featuredBlogs.forEach(item => {
+            mediaMetaIds.add(item?.blogSpecific?.mediaMetaId);
         });
 
         // Fetch all MediaMeta documents in one query
         const mediaMetaMap = new Map();
         const mediaMetaDocs = await MediaMeta.find({ _id: { $in: Array.from(mediaMetaIds) } })
-            .select('_id url type metadata')
+            // .select('_id type metadata')
             .lean();
-        mediaMetaDocs.forEach(doc => mediaMetaMap.set(doc._id.toString(), doc));
+        mediaMetaDocs.forEach(doc => mediaMetaMap.set(doc.mediaFileId, doc));
+        mediaMetaDocs.forEach(doc => mediaMetaMap.set(doc.thumbnailId, doc));
+        const mediaFileIds = mediaMetaDocs.map(doc => doc.mediaFileId);
+        const thumbnailIds = mediaMetaDocs.map(doc => doc.thumbnailId);
 
+        const fileDetails = await fileModel.find({ fileId: { $in: [...mediaFileIds, ...thumbnailIds] } })
+            // .select('fileId fileName fileType fileSize url')
+            .lean();
+
+        // Map file details to mediaMetaMap
+        const urlDetailsWithmediaMetaMap = new Map();
+        fileDetails.forEach(eachFile => {
+            const mediaDocs = mediaMetaMap.get(eachFile.fileId);
+            if(urlDetailsWithmediaMetaMap.has(mediaDocs._id)) {
+                const existingMediaMeta = urlDetailsWithmediaMetaMap.get(mediaDocs._id);
+                if(eachFile.containerName === 'thumbnails') {
+                    const updatedExistingMedia = {
+                        ...existingMediaMeta,
+                        thumbnailDetails: {
+                            fileId: eachFile.fileId,
+                            fileName: eachFile.originalName,
+                            length: eachFile.size,
+                            visibility: eachFile.visibility,
+                            url: eachFile.url,
+                            id: eachFile._id
+                        }
+                    }
+                    urlDetailsWithmediaMetaMap.set(mediaDocs._id, updatedExistingMedia);
+                } else {
+                    const updatedExistingMedia = {
+                        ...existingMediaMeta,
+                        mediaDetails: {
+                            fileId: eachFile.fileId,
+                            fileName: eachFile.originalName,
+                            length: eachFile.size,
+                            visibility: eachFile.visibility,
+                            url: eachFile.url,
+                            id: eachFile._id
+                        }
+                    }
+                    urlDetailsWithmediaMetaMap.set(mediaDocs._id, updatedExistingMedia);
+                }
+            } else {
+                const newExistingMediaPayload = {
+                    ...mediaDocs
+                }
+                const urlDetails = {
+                        fileId: eachFile.fileId,
+                        fileName: eachFile.originalName,
+                        length: eachFile.size,
+                        visibility: eachFile.visibility,
+                        url: eachFile.url,
+                        id: eachFile._id
+                    }
+                if(eachFile.containerName === 'thumbnails') {
+                    newExistingMediaPayload.thumbnailDetails = urlDetails;
+                } else { 
+                     newExistingMediaPayload.mediaDetails = urlDetails;
+                }
+                urlDetailsWithmediaMetaMap.set(mediaDocs._id, newExistingMediaPayload);
+            }
+        });
+
+
+        const  urlDetailsWithmediaMeta = [];
+        
         // Collect all user IDs
         const userIds = new Set();
-        [...featuredBlogs, ...featuredVideos, ...featuredReels,
-            ...trendingBlogs, ...trendingVideos, ...trendingReels,
-            ...latestBlogs, ...latestVideos, ...latestReels].forEach(item => {
+        [...featuredBlogs, ...featuredVideos, ...featuredReels].forEach(item => {
             if (item.user) userIds.add(item.user);
+            const payload = {
+                ...item,
+                ...urlDetailsWithmediaMetaMap.get(item?.videoSpecific?.mediaMetaId || item?.reelSpecific?.mediaMetaId),
+                id: item._id
+            }
+            delete payload._id;
+            delete payload.__v;
+            urlDetailsWithmediaMeta.push(payload);
         });
 
         // Fetch all user documents in one query
@@ -119,20 +192,31 @@ exports.getHomeFeed = async (options) => {
             .lean();
         userDocs.forEach(doc => userMap.set(doc._id.toString(), doc));
 
+
+
         // Collect all category IDs
         const categoryIds = new Set();
-        [...featuredBlogs, ...featuredVideos, ...featuredReels,
-            ...trendingBlogs, ...trendingVideos, ...trendingReels,
-            ...latestBlogs, ...latestVideos, ...latestReels].forEach(item => {
+        [...featuredBlogs, ...featuredVideos, ...featuredReels].forEach(item => {
             if (item.category) categoryIds.add(item.category);
         });
 
         // Fetch all category documents in one query
         const categoryMap = new Map();
         const categoryDocs = await Category.find({ _id: { $in: Array.from(categoryIds) } })
-            .select('_id name description')
-            .lean();
+        .select('_id name description')
+        .lean();
         categoryDocs.forEach(doc => categoryMap.set(doc._id.toString(), doc));
+
+       
+        const newUpdatedReels = []
+        const newUpdatedVideos = []
+        urlDetailsWithmediaMeta.forEach((eachData) => {
+            if(eachData.type === 'reel') {
+                newUpdatedReels.push(eachData);
+            } else {
+                newUpdatedVideos.push(eachData);
+            }
+        })
 
         // Format content with populated data
         const formatContent = (items) => {
@@ -165,18 +249,18 @@ exports.getHomeFeed = async (options) => {
         return {
             featured: {
                 blogs: formatContent(featuredBlogs),
-                videos: formatContent(featuredVideos),
-                reels: formatContent(featuredReels)
+                videos: newUpdatedVideos,
+                reels: newUpdatedReels
             },
             trending: {
-                blogs: formatContent(trendingBlogs),
-                videos: formatContent(trendingVideos),
-                reels: formatContent(trendingReels)
+                blogs: formatContent(featuredBlogs),
+                videos: newUpdatedVideos,
+                reels: newUpdatedReels
             },
             latest: {
-                blogs: formatContent(latestBlogs),
-                videos: formatContent(latestVideos),
-                reels: formatContent(latestReels)
+                blogs: formatContent(featuredBlogs),
+                videos: newUpdatedVideos,
+                reels: newUpdatedReels
             },
             pagination: {
                 page,
