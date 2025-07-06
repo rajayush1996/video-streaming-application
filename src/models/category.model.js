@@ -4,6 +4,7 @@ const auditPlugin = require('./plugins/audit.plugin');
 const utils = require('../utils');
 
 const categorySchema = new mongoose.Schema({
+    _id: { type: String },
     name: { type: String, required: true, trim: true },
     type: { type: String, enum: ['videos', 'blogs', 'reels'], required: true },
     parentId: { type: String, ref: 'Category', default: null },
