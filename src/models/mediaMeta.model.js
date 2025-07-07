@@ -10,7 +10,7 @@ const mediaMetadataSchema = new mongoose.Schema({
     },
     thumbnailId: { 
         type: String, 
-        required: [true, 'Thumbnail ID is required'],
+        required: false,
         unique: true,
         trim: true
     },

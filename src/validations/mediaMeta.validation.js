@@ -8,7 +8,7 @@ const getMediaMetadataSchema = {
         page: Joi.number().integer().min(1).description('Page number'),
         limit: Joi.number().integer().min(1).max(100).description('Number of results per page'),
         sortBy: Joi.string().pattern(/^[a-zA-Z0-9_]+:(asc|desc)$/).description('Sort field and direction (e.g., createdAt:desc)'),
-        thumbnailId: Joi.string().description('Filter by thumbnail ID'),
+        thumbnailId: Joi.string().description('Filter by thumbnail ID').optional(),
         mediaFileId: Joi.string().description('Filter by media file ID')
     })
 };
@@ -92,7 +92,7 @@ const getRejectedMediaSchema = {
  */
 const createMediaMetadataSchema = {
     body: Joi.object({
-        thumbnailId: Joi.string().required().description('Thumbnail file ID'),
+        thumbnailId: Joi.string().optional().description('Thumbnail file ID'),
         mediaFileId: Joi.string().required().description('Media file ID'),
         title: Joi.string().min(3).max(100).required().description('Media title'),
         description: Joi.string().max(1000).allow('').optional().description('Media description'),
