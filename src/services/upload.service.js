@@ -185,72 +185,85 @@ exports.handleThumbnailUpload = async (thumbnail, fileName, userId = 'anonymous'
  * @param {string} mediaType - Type of media (video/reel)
  * @returns {Promise<Object>} - The upload result
  */
-exports.processVideoChunk = async (chunk, fileName, chunkIndex, totalChunks, userId = 'anonymous', mediaType = 'video') => {
-    try {
-        const uploadDir = path.join(__dirname, config.cdn.local_upload_path);
-        fileName = sanitizeFilename(fileName.replace(/\s+/g, "_")); // Sanitize filename
-
-        // Ensure the upload directory exists
-        if (!fs.existsSync(uploadDir)) {
-            console.log(`Creating upload directory: ${uploadDir}`);
-            fs.mkdirSync(uploadDir, { recursive: true });
-        }
-
-        const chunkPath = path.join(uploadDir, `${fileName}.part${chunkIndex}`);
-        console.log(`🚀 Saving chunk to: ${chunkPath}`);
-        await chunk.mv(chunkPath);
-
-        // Check if chunk is valid
-        if (!chunk) {
-            console.error(`❌ Chunk is undefined or empty for chunkIndex: ${chunkIndex}`);
-            throw new Error(`Invalid chunk data for chunkIndex: ${chunkIndex}`);
-        }
-
-        // Save chunk to disk
-        // try {
-        
-        //     console.log(`✅ Chunk ${chunkIndex + 1}/${totalChunks} saved successfully.`);
-        // } catch (error) {
-        //     console.error(`❌ Failed to save chunk ${chunkIndex + 1}/${totalChunks}:`, error);
-        //     throw new Error(`Failed to save chunk ${chunkIndex + 1}/${totalChunks}`);
-        // }
-
-        // Find or create upload progress record
-        let progress = await UploadProgress.findOne({ fileName, userId, mediaType });
-        if (!progress) {
-            progress = new UploadProgress({
-                fileId: Date.now().toString(),
-                fileName,
-                userId,
-                mediaType,
-                totalChunks,
-                uploadedChunks: [],
-                status: "in-progress",
-            });
-            await progress.save();
-        }
-
-        // Update progress
-        if (!progress.uploadedChunks.includes(chunkIndex)) {
-            progress.uploadedChunks.push(chunkIndex);
-            await progress.save();
-        } else {
-            console.log(`⚠️ Chunk ${chunkIndex} already uploaded. Skipping.`);
-        }
-
-        // If all chunks are uploaded, merge and upload to BunnyCDN
-        if (progress.uploadedChunks.length === totalChunks) {
-            return await exports.mergeAndUploadChunks(fileName, totalChunks, uploadDir, userId, mediaType);
-        }
-
-        return {
-            message: `Chunk ${chunkIndex + 1}/${totalChunks} uploaded successfully.`,
-            chunkFile: chunkPath,
-        };
-    } catch (error) {
-        console.error(`❌ Error in processVideoChunk:`, error);
-        throw error;
+exports.processVideoChunk = async (
+  chunk,
+  fileName,
+  chunkIndex,
+  totalChunks,
+  userId = "anonymous",
+  mediaType = "video"
+) => {
+  try {
+    if (!chunk || !fileName || isNaN(chunkIndex) || isNaN(totalChunks)) {
+      throw new Error("Missing or invalid chunk metadata.");
     }
+
+    const uploadDir = path.join(__dirname, config.cdn.local_upload_path);
+    fileName = sanitizeFilename(fileName.replace(/\s+/g, "_"));
+
+    // Ensure upload directory exists
+    if (!fs.existsSync(uploadDir)) {
+      console.log(`Creating upload directory: ${uploadDir}`);
+      fs.mkdirSync(uploadDir, { recursive: true });
+    }
+
+    const chunkPath = path.join(uploadDir, `${fileName}.part${chunkIndex}`);
+    console.log(`Saving chunk to: ${chunkPath}`);
+
+    // Save the chunk to disk
+    await chunk.mv(chunkPath);
+
+    // Ensure upload progress is tracked
+    let progress = await UploadProgress.findOne({ fileName, userId, mediaType });
+
+    if (!progress) {
+      progress = new UploadProgress({
+        fileId: Date.now().toString(),
+        fileName,
+        userId,
+        mediaType,
+        totalChunks,
+        uploadedChunks: [],
+        status: "in-progress",
+      });
+      await progress.save();
+    }
+
+    // Update uploadedChunks if not already tracked
+    if (!progress.uploadedChunks.includes(chunkIndex)) {
+      progress.uploadedChunks.push(chunkIndex);
+      await progress.save();
+      console.log(`Recorded chunk ${chunkIndex + 1}/${totalChunks} in progress`);
+    } else {
+      console.log(`Chunk ${chunkIndex + 1} already recorded. Skipping.`);
+    }
+
+    // If all chunks are uploaded
+    if (progress.uploadedChunks.length === totalChunks) {
+      // Ensure no duplicates
+      const uniqueChunks = new Set(progress.uploadedChunks);
+      if (uniqueChunks.size === totalChunks) {
+        console.log("🎉 All chunks uploaded. Merging...");
+        return await exports.mergeAndUploadChunks(
+          fileName,
+          totalChunks,
+          uploadDir,
+          userId,
+          mediaType
+        );
+      } else {
+        console.warn("Duplicate chunks detected. Merge skipped until clean.");
+      }
+    }
+
+    return {
+      message: `Chunk ${chunkIndex + 1}/${totalChunks} uploaded successfully.`,
+      chunkFile: chunkPath,
+    };
+  } catch (error) {
+    console.error("Error in processVideoChunk:", error);
+    throw new Error(error.message || "Failed to process chunk.");
+  }
 };
 
 /**
@@ -273,7 +286,7 @@ exports.mergeAndUploadChunks = async (fileName, totalChunks, uploadDir, userId, 
         const chunkFile = path.join(uploadDir, `${fileName}.part${i}`);
         chunkFiles.push(chunkFile); // Store chunk file path
         
-        console.log("🚀 ~ exports.mergeAndUploadChunks= ~ chunkFile:", chunkFile);
+        // console.log(" ~ exports.mergeAndUploadChunks= ~ chunkFile:", chunkFile);
         if (!fs.existsSync(chunkFile)) {
             console.error(`Missing chunk: ${chunkFile}`);
             throw new Error("Missing chunk file");

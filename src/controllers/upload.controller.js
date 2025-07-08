@@ -4,51 +4,55 @@ const { handleThumbnailUpload, processVideoChunk } = uploadService;
 const fs = require('fs');
 
 const uploadVideo = async (req, res) => {
-    try {
-        console.log("📥 Incoming upload request:", req.body);
+  try {
+    console.log("Incoming upload request:", req.body);
 
-        let { fileName, chunkIndex, totalChunks, isThumbnail } = req.body;
+    let { fileName, chunkIndex, totalChunks, isThumbnail } = req.body;
 
-        // ✅ Thumbnail Upload
-        if (isThumbnail === 'true') {
-            if (!req.files || !req.files.thumbnail) {
-                return res.status(400).json({ error: "No thumbnail file provided" });
-            }
-  
-            const userId = req.user?.id || 'anonymous';
-            const result = await handleThumbnailUpload(req.files.thumbnail, fileName, userId);
-            return res.json(result);
-        }
-
-        if (!req.files || !req.files.chunk) {
-            return res.status(400).json({ error: "No file chunk provided" });
-        }   
-        
-        chunkIndex = parseInt(chunkIndex);
-        totalChunks = parseInt(totalChunks);
-        
-        const userId = req.user?.id || 'anonymous';
-        
-        const result = await processVideoChunk(
-            req.files.chunk,
-            fileName,
-            chunkIndex,
-            totalChunks,
-            userId,
-            'video' // Explicitly set media type for video uploads
-        );
-
-        // Only clean up final file after successful upload
-        if (result.finalFilePath && fs.existsSync(result.finalFilePath)) {
-            fs.unlinkSync(result.finalFilePath);
-        }
-
-        return res.json(result);
-    } catch (error) {
-        console.error("❌ Upload error:", error);
-        return res.status(500).json({ error: error.message || "Upload failed" });
+    if (!fileName) {
+      return res.status(400).json({ error: "Missing fileName" });
     }
+
+    const userId = req.user?.id || 'anonymous';
+
+    // Handle Thumbnail Upload
+    if (isThumbnail === 'true') {
+      if (!req.files || !req.files.thumbnail) {
+        return res.status(400).json({ error: "No thumbnail file provided" });
+      }
+
+      const result = await handleThumbnailUpload(req.files.thumbnail, fileName, userId);
+      return res.json(result);
+    }
+
+    // Handle Video Chunk Upload
+    if (!req.files || !req.files.chunk) {
+      return res.status(400).json({ error: "No file chunk provided" });
+    }
+
+    // Parse integers properly
+    chunkIndex = parseInt(chunkIndex);
+    totalChunks = parseInt(totalChunks);
+
+    // Process the current chunk
+    const result = await processVideoChunk(
+      req.files.chunk,
+      fileName,
+      chunkIndex,
+      totalChunks,
+      userId,
+      'video'
+    );
+
+    // Don't delete final file here! Already handled in merge/upload logic
+    return res.json(result);
+
+  } catch (error) {
+    console.error("Upload error:", error);
+    return res.status(500).json({ error: error.message || "Upload failed" });
+  }
 };
+
 
 /**
  * API to get the progress of an ongoing file upload.

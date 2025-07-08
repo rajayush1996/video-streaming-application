@@ -14,7 +14,6 @@ const utils = require('../utils');
 
 class MediaMetaService {
     async createMediaMetaInfo(metaInfo, isAdmin = false) {
-        console.log("🚀 ~ MediaMetaService ~ createMediaMetaInfo ~ metaInfo:", metaInfo);
         try {
             const defaultMetaInfo = {
                 ...metaInfo,

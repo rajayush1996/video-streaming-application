@@ -32,4 +32,6 @@ router.use('/categories', categoryRouter);
 // Dashboard routes
 router.use('/dashboard', dashboardRouter);
 
+router.use('/upload', uploadRouter)
+
 module.exports = router; 

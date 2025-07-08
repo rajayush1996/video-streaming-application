@@ -49,8 +49,30 @@ app.use(helmet()); // Set various HTTP headers for security
 
 app.use(logger('dev'));
 app.use(fileUpload());
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+const rawExcludedPaths = [
+  /^\/api\/v1\/admin\/upload\/chunk\//,
+];
+
+// Conditionally apply JSON parser
+app.use((req, res, next) => {
+  const isRawRoute = rawExcludedPaths.some((pattern) => pattern.test(req.path));
+
+  if (isRawRoute) {
+    // Skip JSON parser for binary routes
+    return next();
+  }
+
+  // Apply JSON parser otherwise
+  express.json({ limit: '50mb' })(req, res, next);
+});
+app.use((req, res, next) => {
+  const isRawRoute = rawExcludedPaths.some((pattern) => pattern.test(req.path));
+
+  if (isRawRoute) return next();
+
+  express.urlencoded({ extended: true, limit: '50mb' })(req, res, next);
+});
+
 
 app.use(cookieParser());
 

@@ -8,7 +8,7 @@ const auth = (permission) => {
     return async (req, res, next) => {
         try {
             const authHeader = req.headers.authorization;
-            console.log("🚀 ~ return ~ authHeader:", authHeader);
+            // console.log("🚀 ~ return ~ authHeader:", authHeader);
             if (!authHeader || !authHeader.startsWith('Bearer ')) {
                 throw new UnauthorizedError('No token provided');
             }
