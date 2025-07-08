@@ -50,7 +50,7 @@ class MediaMetaService {
                     status: 'published',
                     type: 'reel',
                     reelSpecific: {
-                        description: metaInfo.description,
+                        description: metaInfo?.description || '',
                         duration: metaInfo.metadata?.duration || '00:00:00',
                         mediaMetaId: mediaMeta._id
                     }

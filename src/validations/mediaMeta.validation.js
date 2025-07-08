@@ -95,7 +95,7 @@ const createMediaMetadataSchema = {
         thumbnailId: Joi.string().optional().description('Thumbnail file ID'),
         mediaFileId: Joi.string().required().description('Media file ID'),
         title: Joi.string().min(3).max(100).required().description('Media title'),
-        description: Joi.string().max(1000).allow('').optional().description('Media description'),
+        description: Joi.string().optional().max(1000).optional().description('Media description'),
         category: Joi.string().max(50).allow('').optional().description('Media category'),
         mediaType: Joi.string().valid('video', 'reel', 'thumbnail').default('video').description('Type of media'),
         userId: Joi.string().optional().description('User ID of the uploader'),
