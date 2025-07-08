@@ -107,8 +107,11 @@ exports.getHomeFeed = async (options) => {
             .lean();
         mediaMetaDocs.forEach(doc => mediaMetaMap.set(doc.mediaFileId, doc));
         mediaMetaDocs.forEach(doc => mediaMetaMap.set(doc.thumbnailId, doc));
+        // console.log("🚀 ~ exports.getHomeFeed= ~ mediaMetaMap:", mediaMetaMap)
         const mediaFileIds = mediaMetaDocs.map(doc => doc.mediaFileId);
+        // console.log("🚀 ~ exports.getHomeFeed= ~ mediaFileIds:", mediaFileIds)
         const thumbnailIds = mediaMetaDocs.map(doc => doc.thumbnailId);
+        // console.log("🚀 ~ exports.getHomeFeed= ~ thumbnailIds:", thumbnailIds)
 
         const fileDetails = await fileModel.find({ fileId: { $in: [...mediaFileIds, ...thumbnailIds] } })
             // .select('fileId fileName fileType fileSize url')
@@ -119,6 +122,7 @@ exports.getHomeFeed = async (options) => {
         fileDetails.forEach(eachFile => {
             const mediaDocs = mediaMetaMap.get(eachFile.fileId);
             if(urlDetailsWithmediaMetaMap.has(mediaDocs._id)) {
+
                 const existingMediaMeta = urlDetailsWithmediaMetaMap.get(mediaDocs._id);
                 if(eachFile.containerName === 'thumbnails') {
                     const updatedExistingMedia = {
@@ -159,7 +163,7 @@ exports.getHomeFeed = async (options) => {
                         url: eachFile.url,
                         id: eachFile._id
                     }
-                if(eachFile.containerName === 'thumbnails') {
+                if(eachFile.containerName === 'thumbnails' || eachFile.containerName === 'thumbnail') {
                     newExistingMediaPayload.thumbnailDetails = urlDetails;
                 } else { 
                      newExistingMediaPayload.mediaDetails = urlDetails;
@@ -167,6 +171,7 @@ exports.getHomeFeed = async (options) => {
                 urlDetailsWithmediaMetaMap.set(mediaDocs._id, newExistingMediaPayload);
             }
         });
+        console.log("🚀 ~ exports.getHomeFeed= ~ urlDetailsWithmediaMetaMap:", urlDetailsWithmediaMetaMap)
 
 
         const  urlDetailsWithmediaMeta = [];
