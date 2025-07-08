@@ -171,7 +171,6 @@ exports.getHomeFeed = async (options) => {
                 urlDetailsWithmediaMetaMap.set(mediaDocs._id, newExistingMediaPayload);
             }
         });
-        console.log("🚀 ~ exports.getHomeFeed= ~ urlDetailsWithmediaMetaMap:", urlDetailsWithmediaMetaMap)
 
 
         const  urlDetailsWithmediaMeta = [];

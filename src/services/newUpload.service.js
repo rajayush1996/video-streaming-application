@@ -231,7 +231,7 @@ class UploadService {
             console.log(`Service: Image uploaded successfully to BunnyCDN: ${fullBunnyPath}`);
             const timestamp = Date.now();
             // Construct and return the public URL
-            const downloadUrl = `https://${PULL_ZONE_HOSTNAME}/${fullBunnyPath.replace(`${STORAGE_ZONE_NAME}/`, '')}`;
+            const downloadUrl = `${PULL_ZONE_HOSTNAME}/${fullBunnyPath.replace(`${STORAGE_ZONE_NAME}/`, '')}`;
             const fileDetails = await fileSchema.create({
                 fileId: timestamp,
                 blobName: file.name,
