@@ -16,7 +16,7 @@ const mediaMetadataSchema = new mongoose.Schema({
     },
     mediaFileId: { 
         type: String, 
-        required: [true, 'Media file ID is required'],
+        required: false,
         unique: true,
         trim: true
     },
