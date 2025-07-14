@@ -20,8 +20,8 @@ const fileModel = require('../models/file.model');
  */
 exports.getHomeFeed = async (options) => {
     try {
-        const { page = 1, limit = 10, category, featured } = options;
-        const skip = (page - 1) * limit;
+        const { category, featured, videos, blogs, reels } = options;
+        const blogSkip = (page - 1) * limit;
 
         // Build query
         const query = { status: 'published' };
@@ -156,17 +156,17 @@ exports.getHomeFeed = async (options) => {
                     ...mediaDocs
                 }
                 const urlDetails = {
-                        fileId: eachFile.fileId,
-                        fileName: eachFile.originalName,
-                        length: eachFile.size,
-                        visibility: eachFile.visibility,
-                        url: eachFile.url,
-                        id: eachFile._id
-                    }
+                    fileId: eachFile.fileId,
+                    fileName: eachFile.originalName,
+                    length: eachFile.size,
+                    visibility: eachFile.visibility,
+                    url: eachFile.url,
+                    id: eachFile._id
+                }
                 if(eachFile.containerName === 'thumbnails' || eachFile.containerName === 'thumbnail') {
                     newExistingMediaPayload.thumbnailDetails = urlDetails;
                 } else { 
-                     newExistingMediaPayload.mediaDetails = urlDetails;
+                    newExistingMediaPayload.mediaDetails = urlDetails;
                 }
                 urlDetailsWithmediaMetaMap.set(mediaDocs._id, newExistingMediaPayload);
             }
@@ -207,8 +207,8 @@ exports.getHomeFeed = async (options) => {
         // Fetch all category documents in one query
         const categoryMap = new Map();
         const categoryDocs = await Category.find({ _id: { $in: Array.from(categoryIds) } })
-        .select('_id name description')
-        .lean();
+            .select('_id name description')
+            .lean();
         categoryDocs.forEach(doc => categoryMap.set(doc._id.toString(), doc));
 
        

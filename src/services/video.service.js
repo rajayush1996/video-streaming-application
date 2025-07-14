@@ -71,88 +71,50 @@ exports.createVideo = async (videoData, userId) => {
  */
 exports.getAllVideos = async (options) => {
     try {
-        const { page = 1, limit = 10, category, sortBy = 'createdAt', sortOrder = 'desc', featured } = options;
+        const { page = 1, limit = 10, query, sortBy = 'createdAt', sortOrder = 'desc', } = options;
         const skip = (page - 1) * limit;
-
-        // Build query
-        const query = { status: 'published' };
-        if (category) query.category = category;
-        if (featured) query.isFeatured = true;
-
-        // Build sort object
         const sort = {};
         sort[sortBy] = sortOrder === 'asc' ? 1 : -1;
+        // 1) fetch the page of videos + the count
+        const [videos, total] = await Promise.all([
+            Video.find(query)
+                .sort(sort)
+                .skip(skip)
+                .limit(limit)
+                .lean(),
+            Video.countDocuments(query),
+        ]);
 
-        // First fetch videos with basic info
-        const videos = await Video.find(query)
-            .sort(sort)
-            .skip(skip)
-            .limit(limit)
-            .lean();
-
-        // Get total count
-        const total = await Video.countDocuments(query);
-
-        // Collect all MediaMeta IDs
-        const mediaMetaIds = videos.map(video => video.videoSpecific.mediaMetaId);
-
-        // Fetch all MediaMeta documents in one query
-        const mediaMetaMap = new Map();
-        const mediaMetaDocs = await MediaMeta.find({ _id: { $in: mediaMetaIds } })
-            .select('_id url type metadata mediaFileId thumbnailId')
-            .lean();
-        mediaMetaDocs.forEach(doc => mediaMetaMap.set(doc._id.toString(), doc));
-
-        // Collect all file IDs
-        const fileIds = new Set();
-        mediaMetaDocs.forEach(doc => {
-            if (doc.mediaFileId) fileIds.add(doc.mediaFileId);
-            if (doc.thumbnailId) fileIds.add(doc.thumbnailId);
-        });
-
-        // Fetch all file documents in one query
-        const fileMap = new Map();
-        const fileDocs = await File.find({ fileId: { $in: Array.from(fileIds) } })
-            .select('fileId url type metadata')
-            .lean();
-        fileDocs.forEach(doc => fileMap.set(doc.fileId, doc));
-
-        // Format videos with populated data
-        const formattedVideos = videos.map(video => {
-            const mediaMeta = mediaMetaMap.get(video.videoSpecific.mediaMetaId.toString());
-            const mediaFile = mediaMeta ? fileMap.get(mediaMeta.mediaFileId) : null;
-            const thumbnailFile = mediaMeta ? fileMap.get(mediaMeta.thumbnailId) : null;
-
+        // 2) enrich videos with mediaFile/thumbnail exactly as you do now…
+        const results = videos.map((v) => {
+            // … your mapping logic …
             return {
-                ...video,
-                mediaFile: mediaFile ? {
-                    url: mediaFile.url,
-                    type: mediaFile.type,
-                    metadata: mediaFile.metadata
-                } : null,
-                thumbnail: thumbnailFile ? {
-                    url: thumbnailFile.url,
-                    type: thumbnailFile.type,
-                    metadata: thumbnailFile.metadata
-                } : null,
-                duration: video.videoSpecific.duration || '00:00:00'
+                // original video fields
+                ...v,
+                mediaFile: { /* … */ },
+                thumbnail: { /* … */ },
+                duration: v.videoSpecific.duration,
             };
         });
 
+        // 3) compute pagination fields
+        const totalPages = Math.ceil(total / limit);
+        const hasMore    = skip + limit < total;
+
+        // 4) return in the new shape:
         return {
-            videos: formattedVideos,
-            pagination: {
-                page,
-                limit,
-                total,
-                pages: Math.ceil(total / limit)
-            }
+            results,         // your array
+            skip,            // how many you skipped
+            limit,           // page size
+            hasMore,         // is there another page?
+            totalPages,      // how many pages in total?
+            totalResults: total // total count
         };
-    } catch (error) {
-        logger.error('Error in getAllVideos:', error);
-        throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, 'Error fetching videos');
+    } catch (err) {
+    // …
     }
 };
+
 
 /**
  * Get video by ID

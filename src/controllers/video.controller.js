@@ -42,8 +42,16 @@ exports.getAllVideos = async (req, res, next) => {
 
         // Send response
         responseHandler(res, httpStatus.OK, 'Videos retrieved successfully', {
-            videos: result.videos || [],
-            pagination: result.pagination
+            results: result.results || [],
+            pagination: {
+                page: options.page,
+                limit: options.limit,
+                totalPages: result.totalPages,
+                totalResults: result.totalResults,
+                hasMore: result.hasMore,
+                skip: result.skip,
+                limit: result.limit
+            }
         });
     } catch (error) {
         logger.error('Error getting videos:', error);
