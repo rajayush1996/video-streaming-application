@@ -93,9 +93,9 @@ const getRejectedMediaSchema = {
 const createMediaMetadataSchema = {
     body: Joi.object({
         thumbnailId: Joi.string().optional().description('Thumbnail file ID'),
-        mediaFileId: Joi.string().optional().description('Media file ID'),
+        mediaFileId: Joi.string().required().description('Media file ID'),
         title: Joi.string().min(3).max(100).required().description('Media title'),
-        description: Joi.string().optional().max(1000).optional().description('Media description'),
+        description: Joi.string().max(1000).allow('').optional().description('Media description'),
         category: Joi.string().max(50).allow('').optional().description('Media category'),
         mediaType: Joi.string().valid('video', 'reel', 'thumbnail').default('video').description('Type of media'),
         userId: Joi.string().optional().description('User ID of the uploader'),
@@ -104,9 +104,7 @@ const createMediaMetadataSchema = {
         reviewedBy: Joi.string().allow('').optional().description('ID of the reviewer'),
         reviewedAt: Joi.date().allow(null).optional().description('Date of review'),
         isDeleted: Joi.boolean().default(false).description('Soft delete flag'),
-        deletedAt: Joi.date().allow(null).optional().description('Date of deletion'),
-        thumbnailUrl: Joi.string().optional().description('URL of the thumbnail image'),
-        mediaFileUrl: Joi.string().optional().description('URL of the media file'),
+        deletedAt: Joi.date().allow(null).optional().description('Date of deletion')
     })
 };
 

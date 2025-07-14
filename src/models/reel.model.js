@@ -9,7 +9,7 @@ const reelSchema = new mongoose.Schema({
     reelSpecific: {
         description: {
             type: String,
-            required: false,
+            required: [true, 'Description is required'],
             trim: true,
             maxlength: [1000, 'Description cannot exceed 1000 characters']
         },

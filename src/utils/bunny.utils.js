@@ -23,7 +23,7 @@ const uploadToBunnyCDN = async (dataBuffer, bunnyPath) => {
             maxContentLength: Infinity,
             maxBodyLength: Infinity,
         });
-        console.log(`Successfully uploaded to BunnyCDN: ${bunnyPath}`);
+        // console.log(`Successfully uploaded to BunnyCDN: ${bunnyPath}`);
     } catch (error) {
         console.error(`Error uploading to BunnyCDN ${bunnyPath}:`, error.response ? error.response.data : error.message);
         throw new Error(`BunnyCDN upload failed: ${error.message}`);
@@ -43,7 +43,7 @@ const deleteFromBunnyCDN = async (bunnyPath) => {
                 'AccessKey': STORAGE_API_KEY,
             }
         });
-        console.log(`Successfully deleted from BunnyCDN: ${bunnyPath}`);
+        // console.log(`Successfully deleted from BunnyCDN: ${bunnyPath}`);
         return true;
     } catch (error) {
         console.error(`Error deleting from BunnyCDN ${bunnyPath}:`, error.response ? error.response.data : error.message);

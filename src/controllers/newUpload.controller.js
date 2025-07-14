@@ -1,5 +1,5 @@
 const uploadService = require('../services/newUpload.service');
-
+const httpStatus = require('http-status');
 // Wrapper for async handlers to catch errors
 const asyncHandler = (fn) => (req, res, next) => {
     Promise.resolve(fn(req, res, next)).catch(next);
@@ -16,7 +16,7 @@ class UploadController {
             const upload = uploadService.initiateUpload(fileName, totalChunks, fileSize);
             res.status(200).json({ uploadId: upload.uploadId, tempUploadPath: upload.tempUploadPath });
         } catch (error) {
-            console.log("🚀 ~ UploadController ~ initiateUpload ~ error:", error)
+            // console.log("🚀 ~ UploadController ~ initiateUpload ~ error:", error)
             next(error); // Pass error to Express error handler middleware
         }
     }
@@ -38,8 +38,8 @@ class UploadController {
         try {
             const { uploadId, chunkNumber } = req.params;
             const chunkData = req.body; // Raw binary data
-            console.log('Chunk Size:', req.body?.length);
-            console.log('Is Buffer:', Buffer.isBuffer(req.body));
+            // console.log('Chunk Size:', req.body?.length);
+            // console.log('Is Buffer:', Buffer.isBuffer(req.body));
 
             // Basic validation for chunkNumber
             const parsedChunkNumber = parseInt(chunkNumber, 10);
@@ -58,13 +58,45 @@ class UploadController {
     async completeUpload(req, res, next) {
         try {
             const { uploadId } = req.params;
-            const downloadFilesDetails = await uploadService.finalizeUpload(uploadId);
-            res.status(200).json({
-                message: 'File uploaded and finalized successfully!',
-                filesDetails: downloadFilesDetails
+             const downloadFilesDetails = await uploadService.finalizeUpload(uploadId);
+
+            // Immediately send an HTTP 202 Accepted response.
+            // This tells the client the request has been accepted for processing, but not yet completed.
+            res.status(httpStatus.ACCEPTED).json({
+                success: true,
+                message: `File finalization for uploadId ${uploadId} initiated. Please poll the status endpoint for updates.`,
+                uploadId: uploadId,
+                statusUrl: `/api/v1/admin/upload/status/${uploadId}` // Provide the status URL
             });
         } catch (error) {
             next(error);
+        }
+    }
+
+    async getUploadStatus(req, res, next) {
+        try {
+            const { uploadId } = req.params;
+            const uploadState = uploadService.getUploadStatus(uploadId); // This needs to return the object with status and URL
+
+            if (!uploadState) {
+                return res.status(httpStatus.NOT_FOUND).json({
+                    success: false,
+                    message: 'Upload status not found for this ID. It might have expired or never existed.'
+                });
+            }
+
+            // Return the current status and the download URL if completed
+            res.status(httpStatus.OK).json({
+                success: true,
+                uploadId: uploadId,
+                status: uploadState.status, // e.g., 'pending', 'finalizing', 'completed', 'failed'
+                downloadUrl: uploadState.downloadUrl || null, // Will be populated once 'completed'
+                fileDetails: uploadState.fileDetails || null
+            });
+
+        } catch (error) {
+            console.error(`Controller: Error in getUploadStatus for ${req.params.uploadId}:`, error);
+            next(new ApiError(httpStatus.INTERNAL_SERVER_ERROR, `Failed to retrieve upload status: ${error.message}`));
         }
     }
 

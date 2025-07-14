@@ -83,7 +83,7 @@ const auditLogSchema = new mongoose.Schema({
 // Generate UUID with prefix before saving
 // Ensures _id always starts with 'al-'
 auditLogSchema.pre('validate', async function(next) {
-    console.log("🚀 ~ auditLogSchema.pre ~ this._id:", this);
+    // console.log("🚀 ~ auditLogSchema.pre ~ this._id:", this);
     if (!this._id || !this._id.startsWith('al-')) {
         this._id = utils.uuid('al-');
     }

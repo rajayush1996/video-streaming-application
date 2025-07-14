@@ -226,7 +226,7 @@ class AuthService {
             await admin.save();
 
             const tokens = await this.generateAuthTokens(admin);
-            console.log("🚀 ~ AuthService ~ adminSignIn ~ tokens:", tokens);
+            // console.log("🚀 ~ AuthService ~ adminSignIn ~ tokens:", tokens);
             
             // Set refresh token in HTTP-only cookie
             setRefreshTokenCookie(res, tokens.refreshToken);
@@ -487,7 +487,7 @@ class AuthService {
                 passwordResetToken: token,
                 passwordResetExpires: { $gt: Date.now() }
             });
-            console.log("🚀 ~ AuthService ~ resetPassword ~ user:", user);
+            // console.log("🚀 ~ AuthService ~ resetPassword ~ user:", user);
 
             if (!user) {
                 throw new UnauthorizedError('Invalid or expired password reset token');

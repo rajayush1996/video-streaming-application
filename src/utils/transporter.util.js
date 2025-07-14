@@ -39,7 +39,7 @@ const sendEmail = async (to, subject, message, providerName = "Gmail") => {
         };
 
         await transporter.sendMail(mailOptions);
-        console.log(`Email sent successfully to ${to}`);
+        // console.log(`Email sent successfully to ${to}`);
         return ;
     } catch (error) {
         console.error("Error sending email:", error.message);

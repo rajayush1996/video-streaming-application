@@ -22,7 +22,7 @@ const createUpload = (fileName, totalChunks, fileSize) => {
         status: 'initiated',
         tempUploadPath,
         finalFilePath: `${storageZoneName}/uploads/${fileName}`, // Example final path
-        createdAt: Date.now()
+        createdAt: Date.now(),
     };
     return uploads[uploadId];
 };
@@ -38,6 +38,13 @@ const updateUploadStatus = (uploadId, status) => {
     const upload = uploads[uploadId];
     if (upload) {
         upload.status = status;
+    }
+};
+
+const updateUploadByUploadId = (uploadId, updateData) => {
+    const upload = uploads[uploadId];
+    if (upload) {
+        Object.assign(upload, {...upload, fileDetails: updateData});
     }
 };
 
@@ -73,6 +80,8 @@ const deleteLocalTempDir = (tempDirPath) => {
     }
 };
 
+
+
 module.exports = {
     getUploadById,
     createUpload,
@@ -82,4 +91,5 @@ module.exports = {
     deleteUploadState,
     createLocalTempDir,
     deleteLocalTempDir,
+    updateUploadByUploadId
 };

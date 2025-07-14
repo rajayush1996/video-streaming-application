@@ -22,54 +22,6 @@ class MediaMetaService {
                 reviewedAt: isAdmin ? new Date() : undefined
             };
 
-            let newFiles = [];
-            if(metaInfo.mediaFileUrl) {
-                const fileId = new Date().getTime().toString();
-                const filesURLChunk = metaInfo.mediaFileUrl.split('/');
-                const fileName = filesURLChunk[filesURLChunk.length - 1];
-                newFiles.push({
-                    fileId: fileId,
-                    blobName: fileName,
-                    url: metaInfo.mediaFileUrl,
-                    mimeType: metaInfo.mediaFileMimeType || 'videos/mp4',
-                    size: metaInfo.mediaFileSize || 0,
-                    visibility: 'public',
-                    originalName: fileName,
-                    containerName: 'videos',
-                    tags: metaInfo.mediaFileTags || []
-                });
-            }
-            if(metaInfo.thumbnailUrl) {
-                const thumbId = new Date().getTime().toString() + '_thumb';
-                const thumbFilesURLChunk = metaInfo.thumbnailUrl.split('/');
-                const thumbFileName = thumbFilesURLChunk[thumbFilesURLChunk.length - 1];
-                newFiles.push({
-                    fileId: thumbId,
-                    blobName: thumbFileName,
-                    url: metaInfo.thumbnailUrl,
-                    mimeType: metaInfo.thumbnailMimeType || 'image/jpeg',
-                    size: metaInfo.thumbnailSize || 0,
-                    visibility: 'public',
-                    originalName: thumbFileName,
-                    containerName: 'thumbnails',
-                    tags: metaInfo.thumbnailTags || []
-                });
-            }
-            const docs = await Promise.all(
-                newFiles.map(file => File.create(file))
-            );
-            docs.forEach(doc => {
-                const docObject = doc.toObject();
-                if(doc.containerName === 'videos') {
-                    defaultMetaInfo.mediaFileId = docObject.fileId;
-                } else if(doc.containerName === 'thumbnails') {
-                    defaultMetaInfo.thumbnailId = docObject.fileId;
-                }
-            });
-            console.log("🚀 ~ MediaMetaService ~ createMediaMetaInfo ~ defaultMetaInfo:", defaultMetaInfo)
-            
-            
-            
             const mediaMeta = await MediaMeta.create(defaultMetaInfo);
             
             // Create corresponding content based on mediaType
@@ -98,7 +50,7 @@ class MediaMetaService {
                     status: 'published',
                     type: 'reel',
                     reelSpecific: {
-                        description: metaInfo?.description || '',
+                        description: metaInfo.description,
                         duration: metaInfo.metadata?.duration || '00:00:00',
                         mediaMetaId: mediaMeta._id
                     }
@@ -180,8 +132,8 @@ class MediaMetaService {
                 filter.category = category;
             }
 
-            console.log("→ final filter:", filter);
-            console.log("→ query options:", { page, limit, sortBy, ...otherOptions });
+            // console.log("→ final filter:", filter);
+            // console.log("→ query options:", { page, limit, sortBy, ...otherOptions });
 
             // 5) Call your paginate plugin
             const result = await MediaMeta.paginate(filter, {
@@ -209,7 +161,7 @@ class MediaMetaService {
                         .lean();
                     
                     const videoMap = new Map(videos.map(v => [v.videoSpecific.mediaMetaId, v]));
-                    console.log("🚀 ~ MediaMetaService ~ getMediaMetadata ~ videoMap:", videoMap);
+                    // console.log("🚀 ~ MediaMetaService ~ getMediaMetadata ~ videoMap:", videoMap);
                     result.results = result.results.map(item => ({
                         ...item,
                         duration: videoMap.get(item._id)?.videoSpecific?.duration || '00:00:00',
@@ -266,17 +218,13 @@ class MediaMetaService {
         try {
             // Extract all thumbnailIds and mediaFileIds
             const thumbnailIds = mediaMetadata.map((item) => item.thumbnailId);
+            console.log("🚀 ~ MediaMetaService ~ enhanceWithFileUrls ~ thumbnailIds:", thumbnailIds);
             const mediaFileIds = mediaMetadata.map((item) => item.mediaFileId);
+            console.log("🚀 ~ MediaMetaService ~ enhanceWithFileUrls ~ mediaFileIds:", mediaFileIds);
 
             // Remove file extensions from IDs for matching with fileId in the database
             const thumbnailIdsWithoutExt = thumbnailIds.map((id) => {
-                // Handle both formats: "vid-1743733224619_thumb.jpg" and "thumb_vid-1743734282681_thumb"
-                if (id.includes("_thumb")) {
-                    // If it's a thumbnail, it might be in the format "thumb_vid-1743734282681_thumb"
-                    return id.replace(/\.(jpg|jpeg|png)$/, "");
-                }
-                // For regular files, just remove the extension
-                return id.split(".")[0];
+                return id?.split(".")[0];
             });
 
             const mediaFileIdsWithoutExt = mediaFileIds.map((id) => {
@@ -323,14 +271,14 @@ class MediaMetaService {
 
                 // If not found, try to find by ID without extension
                 if (!thumbnailUrl) {
-                    const thumbnailIdWithoutExt = item.thumbnailId.includes("_thumb")
-                        ? item.thumbnailId.replace(/\.(jpg|jpeg|png)$/, "")
-                        : item.thumbnailId.split(".")[0];
+                    const thumbnailIdWithoutExt = item?.thumbnailId?.includes("_thumb")
+                        ? item?.thumbnailId?.replace(/\.(jpg|jpeg|png)$/, "")
+                        : item.thumbnailId?.split(".")[0];
                     thumbnailUrl = fileMap[thumbnailIdWithoutExt];
                 }
 
                 if (!mediaFileUrl) {
-                    const mediaFileIdWithoutExt = item.mediaFileId.split(".")[0];
+                    const mediaFileIdWithoutExt = item?.mediaFileId?.split(".")[0];
                     mediaFileUrl = fileMap[mediaFileIdWithoutExt];
                 }
 

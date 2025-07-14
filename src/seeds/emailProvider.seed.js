@@ -6,7 +6,7 @@ const seedEmailProviders = async () => {
         const existingProviders = await EmailProvider.countDocuments();
 
         if (existingProviders === 0) {
-            console.log("Seeding default email providers...");
+            // console.log("Seeding default email providers...");
 
             const emailProviders = [
                 {
@@ -45,9 +45,9 @@ const seedEmailProviders = async () => {
             ];
 
             await EmailProvider.insertMany(emailProviders);
-            console.log(" Default email providers seeded successfully.");
+            // console.log(" Default email providers seeded successfully.");
         } else {
-            console.log(" Email providers already exist. Skipping seed.");
+            // console.log(" Email providers already exist. Skipping seed.");
         }
     } catch (error) {
         console.error("Error seeding email providers:", error);

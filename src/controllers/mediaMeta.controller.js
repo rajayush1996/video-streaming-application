@@ -168,7 +168,7 @@ const mediaMetaController = {
     createMediaMetaDetails: async (req, res, next) => {
         try {
             const { body } = req;
-            console.log("🚀 ~ createMediaMetaDetails: ~ body:", body);
+            // console.log("🚀 ~ createMediaMetaDetails: ~ body:", body);
             const isAdmin = req.user?.role === 'admin';
             
             // Add userId from JWT authentication

@@ -5,7 +5,7 @@ const fs = require('fs');
 
 const uploadVideo = async (req, res) => {
   try {
-    console.log("Incoming upload request:", req.body);
+    // console.log("Incoming upload request:", req.body);
 
     let { fileName, chunkIndex, totalChunks, isThumbnail } = req.body;
 
@@ -123,7 +123,7 @@ const getUploadProgress = async (req, res) => {
  */
 const uploadReel = async (req, res) => {
     try {
-        console.log("📥 Incoming reel upload:", req.body);
+        // console.log("📥 Incoming reel upload:", req.body);
   
         let { fileName, chunkIndex, totalChunks, isThumbnail } = req.body;
   

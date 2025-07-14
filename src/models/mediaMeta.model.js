@@ -16,7 +16,7 @@ const mediaMetadataSchema = new mongoose.Schema({
     },
     mediaFileId: { 
         type: String, 
-        required: false,
+        required: [true, 'Media file ID is required'],
         unique: true,
         trim: true
     },
@@ -30,8 +30,7 @@ const mediaMetadataSchema = new mongoose.Schema({
     description: { 
         type: String,
         trim: true,
-        maxlength: [1000, 'Description cannot exceed 1000 characters'],
-        required: false,
+        maxlength: [1000, 'Description cannot exceed 1000 characters']
     },
     category: { 
         type: String,
