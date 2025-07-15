@@ -20,8 +20,8 @@ const fileModel = require('../models/file.model');
  */
 exports.getHomeFeed = async (options) => {
     try {
-        const { category, featured, videos, blogs, reels } = options;
-        const blogSkip = (page - 1) * limit;
+        const { page = 1, limit = 10, category, featured, videos, blogs, reels } = options;
+        const skip = (page - 1) * limit;
 
         // Build query
         const query = { status: 'published' };
