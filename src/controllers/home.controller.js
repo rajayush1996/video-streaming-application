@@ -12,7 +12,7 @@ const logger = require('../features/logger');
  */
 exports.getHomeFeed = async (req, res, next) => {
     try {
-        const { page, limit, category, featured } = req.query;
+        const { page, limit, category, featured,  } = req.query;
         
         // Parse and validate query parameters
         const options = {
