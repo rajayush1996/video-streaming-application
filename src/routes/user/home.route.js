@@ -38,7 +38,7 @@ const homeController = require('../../controllers/home.controller');
  *       401:
  *         description: Unauthorized
  */
-router.get(
+router.post(
     '/',
     // auth('getUser'),
     // validate(homeValidation.getHomeSchema),
