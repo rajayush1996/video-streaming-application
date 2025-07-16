@@ -1,5 +1,7 @@
 const mongoose = require('mongoose');
 const baseContentSchema = require('./baseContent.model');
+const { toJSON, paginate } = require('./plugins');
+const auditPlugin = require('./plugins/audit.plugin');
 
 const videoSchema = new mongoose.Schema({
     ...baseContentSchema.obj,
@@ -19,6 +21,11 @@ const videoSchema = new mongoose.Schema({
     timestamps: true,
     _id: false
 });
+
+
+videoSchema.plugin(toJSON);
+videoSchema.plugin(paginate);
+videoSchema.plugin(auditPlugin, { resourceType: 'Video' });
 
 // Add video-specific indexes
 videoSchema.index({ 'videoSpecific.duration': 1 });

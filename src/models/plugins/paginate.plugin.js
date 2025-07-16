@@ -117,6 +117,7 @@ const paginate = schema => {
                 hasMore,
                 totalPages,
                 totalResults,
+                currentPage: page,
             };
             return Promise.resolve(result);
         });

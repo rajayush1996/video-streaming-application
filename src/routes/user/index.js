@@ -11,6 +11,7 @@ const mediaMetaRoutes = require('./mediaMeta.route');
 const reelsRoutes = require('./reels.route');
 const homeRoutes = require('./home.route');
 const videoRoutes = require('./video.route');
+const categoryRoutes = require('./category.route')
 
 router.use('/auth', authRoutes);
 
@@ -37,5 +38,8 @@ router.use('/videos', videoRoutes);
 
 // Home routes (public access)
 router.use('/home', homeRoutes);
+
+// Category routes (public access)
+router.use('/categories', categoryRoutes);
 
 module.exports = router; 

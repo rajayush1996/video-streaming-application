@@ -35,3 +35,19 @@ exports.getHomeFeed = async (req, res, next) => {
         next(error);
     }
 }; 
+
+
+exports.getTrendingVideos = async (req, res, next) => {
+    try {
+        const { page = 1, limit = 10, category } = req.query;
+        const trendingVideos = await homeService.getTrendingVideos({
+            page: Number(page),
+            limit: Number(limit),
+            category,
+        });
+        responseHandler(res, httpStatus.OK, 'Trending videos retrieved successfully', trendingVideos);
+    } catch (error) {
+        logger.error('Error getting trending videos:', error);
+        next(error);
+    }
+};

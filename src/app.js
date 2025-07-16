@@ -13,7 +13,8 @@ const config = require('../config');
 // const { jwtStrategy } = require('./config/passport');
 // const { authLimiter } = require('./middlewares/rateLimiter');
 // const routes = require('./routes/v1');
-const ApiError = require('./features/error');
+const AppError = require('./features/error');
+const { ApiError } = require('./features/error');
 
 const v1Routes = require('./routes');
 const swaggerUi = require('swagger-ui-express');
@@ -50,27 +51,27 @@ app.use(helmet()); // Set various HTTP headers for security
 app.use(logger('dev'));
 app.use(fileUpload());
 const rawExcludedPaths = [
-  /^\/api\/v1\/admin\/upload\/chunk\//,
+    /^\/api\/v1\/admin\/upload\/chunk\//,
 ];
 
 // Conditionally apply JSON parser
 app.use((req, res, next) => {
-  const isRawRoute = rawExcludedPaths.some((pattern) => pattern.test(req.path));
+    const isRawRoute = rawExcludedPaths.some((pattern) => pattern.test(req.path));
 
-  if (isRawRoute) {
+    if (isRawRoute) {
     // Skip JSON parser for binary routes
-    return next();
-  }
+        return next();
+    }
 
-  // Apply JSON parser otherwise
-  express.json({ limit: '50mb' })(req, res, next);
+    // Apply JSON parser otherwise
+    express.json({ limit: '50mb' })(req, res, next);
 });
 app.use((req, res, next) => {
-  const isRawRoute = rawExcludedPaths.some((pattern) => pattern.test(req.path));
+    const isRawRoute = rawExcludedPaths.some((pattern) => pattern.test(req.path));
 
-  if (isRawRoute) return next();
+    if (isRawRoute) return next();
 
-  express.urlencoded({ extended: true, limit: '50mb' })(req, res, next);
+    express.urlencoded({ extended: true, limit: '50mb' })(req, res, next);
 });
 
 
@@ -94,6 +95,7 @@ const allowedOrigins = [
     'https://admin-desibhabhi.netlify.app',
     'http://localhost:8080',
     'http://localhost:3000',
+    'http://localhost:8085',
 ];
 
 app.use(cors({
@@ -142,14 +144,14 @@ app.get('/api/v1/health', (req, res) => {
 
 // All routes are handled through the main routes index
 app.use('/uploads', cors({
-  origin: function (origin, callback) {
-    if (!origin || allowedOrigins.includes(origin)) {
-      callback(null, true);
-    } else {
-      callback(new Error('Not allowed by CORS'));
-    }
-  },
-  credentials: true,
+    origin: function (origin, callback) {
+        if (!origin || allowedOrigins.includes(origin)) {
+            callback(null, true);
+        } else {
+            callback(new Error('Not allowed by CORS'));
+        }
+    },
+    credentials: true,
 }), express.static(path.join(__dirname, '../uploads')));
 
 app.use('/api/v1', v1Routes);
@@ -183,10 +185,10 @@ app.use((req, res, next) => {
 });
 
 // convert error to ApiError, if needed
-app.use(ApiError.errorConverter);
+app.use(AppError.errorConverter);
 
 // handle error
-app.use(ApiError.errorHandler);
+app.use(AppError.errorHandler);
 
 module.exports = app;
 
