@@ -11,7 +11,7 @@ const mediaMetadataSchema = new mongoose.Schema({
     thumbnailId: { 
         type: String, 
         required: false,
-        unique: true,
+        // unique: true,
         trim: true
     },
     mediaFileId: { 

@@ -96,6 +96,8 @@ const allowedOrigins = [
     'http://localhost:8080',
     'http://localhost:3000',
     'http://localhost:8085',
+    'http://localhost:8888',
+
 ];
 
 app.use(cors({
