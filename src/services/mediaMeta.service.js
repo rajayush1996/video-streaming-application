@@ -196,8 +196,8 @@ class MediaMetaService {
                     doc.toObject ? doc.toObject() : doc
                 );
                 result.results = formatApiResult(plain);
-                result.results = await this.enhanceWithFileUrls(result.results);
-                result.results = await this.enhanceWithCategoryDetails(result.results);
+                result.results = await this.enhanceWithFileUrls(result?.results);
+                result.results = await this.enhanceWithCategoryDetails(result?.results);
 
                 // Merge with video/reel data based on type
                 if (type === 'video') {
@@ -330,10 +330,10 @@ class MediaMetaService {
 
                 // If still not found, try to find by partial match
                 if (!thumbnailUrl) {
-                    const thumbnailFile = files.find(
+                    const thumbnailFile = files?.find(
                         (f) =>
-                            (f.fileId && f.fileId.includes(item.thumbnailId.split(".")[0])) ||
-                            (f.blobName && f.blobName.includes(item.thumbnailId))
+                            (f?.fileId && f?.fileId?.includes(item?.thumbnailId?.split(".")[0])) ||
+                            (f.blobName && f.blobName.includes(item?.thumbnailId))
                     );
                     if (thumbnailFile) thumbnailUrl = thumbnailFile.url;
                 }
@@ -341,10 +341,10 @@ class MediaMetaService {
                 if (!mediaFileUrl) {
                     const mediaFile = files.find(
                         (f) =>
-                            (f.fileId && f.fileId.includes(item.mediaFileId.split(".")[0])) ||
-                            (f.blobName && f.blobName.includes(item.mediaFileId))
+                            (f.fileId && f.fileId.includes(item?.mediaFileId?.split(".")[0])) ||
+                            (f.blobName && f.blobName.includes(item?.mediaFileId))
                     );
-                    if (mediaFile) mediaFileUrl = mediaFile.url;
+                    if (mediaFile) mediaFileUrl = mediaFile?.url;
                 }
 
                 enhancedItem.thumbnailUrl = thumbnailUrl || null;
