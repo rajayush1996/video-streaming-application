@@ -11,6 +11,7 @@ const Video = require('../models/video.model');
 const Reel = require('../models/reel.model');
 const logger = require('../features/logger');
 const utils = require('../utils');
+const { generateClipAndThumbnailFromHls } = require("../utils/videoProcessor");
 
 class MediaMetaService {
     async createMediaMetaInfo(metaInfo, isAdmin = false) {
@@ -38,6 +39,9 @@ class MediaMetaService {
                     containerName: 'videos',
                     tags: metaInfo.mediaFileTags || []
                 });
+                const { clipUrl, thumbUrl } = await generateClipAndThumbnailFromHls(metaInfo.mediaFileUrl, 30, 10);
+                console.log("🚀 ~ :43 ~ MediaMetaService ~ createMediaMetaInfo ~ thumbUrl:", thumbUrl)
+                console.log("🚀 ~ :43 ~ MediaMetaService ~ createMediaMetaInfo ~ clipUrl:", clipUrl)
             }
             if (metaInfo.thumbnailUrl) {
                 const thumbId = new Date().getTime().toString() + '_thumb';
@@ -66,7 +70,6 @@ class MediaMetaService {
                     defaultMetaInfo.thumbnailId = docObject.fileId;
                 }
             });
-            console.log("🚀 ~ MediaMetaService ~ createMediaMetaInfo ~ defaultMetaInfo:", defaultMetaInfo)
 
             const mediaMeta = await MediaMeta.create(defaultMetaInfo);
 
