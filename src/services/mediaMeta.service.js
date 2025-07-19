@@ -22,8 +22,54 @@ class MediaMetaService {
                 reviewedAt: isAdmin ? new Date() : undefined
             };
 
+            let newFiles = [];
+            if (metaInfo.mediaFileUrl) {
+                const fileId = metaInfo.mediaFileId;
+                const filesURLChunk = metaInfo.mediaFileUrl.split('/');
+                const fileName = filesURLChunk[filesURLChunk.length - 1];
+                newFiles.push({
+                    fileId: fileId,
+                    blobName: fileName,
+                    url: metaInfo.mediaFileUrl,
+                    mimeType: metaInfo.mediaFileMimeType || 'videos/mp4',
+                    size: metaInfo.mediaFileSize || 0,
+                    visibility: 'public',
+                    originalName: fileName,
+                    containerName: 'videos',
+                    tags: metaInfo.mediaFileTags || []
+                });
+            }
+            if (metaInfo.thumbnailUrl) {
+                const thumbId = new Date().getTime().toString() + '_thumb';
+                const thumbFilesURLChunk = metaInfo.thumbnailUrl.split('/');
+                const thumbFileName = thumbFilesURLChunk[thumbFilesURLChunk.length - 1];
+                newFiles.push({
+                    fileId: thumbId,
+                    blobName: thumbFileName,
+                    url: metaInfo.thumbnailUrl,
+                    mimeType: metaInfo.thumbnailMimeType || 'image/jpeg',
+                    size: metaInfo.thumbnailSize || 0,
+                    visibility: 'public',
+                    originalName: thumbFileName,
+                    containerName: 'thumbnails',
+                    tags: metaInfo.thumbnailTags || []
+                });
+            }
+            const docs = await Promise.all(
+                newFiles.map(file => File.create(file))
+            );
+            docs.forEach(doc => {
+                const docObject = doc.toObject();
+                if (doc.containerName === 'videos') {
+                    defaultMetaInfo.mediaFileId = docObject.fileId;
+                } else if (doc.containerName === 'thumbnails') {
+                    defaultMetaInfo.thumbnailId = docObject.fileId;
+                }
+            });
+            console.log("🚀 ~ MediaMetaService ~ createMediaMetaInfo ~ defaultMetaInfo:", defaultMetaInfo)
+
             const mediaMeta = await MediaMeta.create(defaultMetaInfo);
-            
+
             // Create corresponding content based on mediaType
             let content;
             if (metaInfo.mediaType === 'video') {
@@ -56,14 +102,14 @@ class MediaMetaService {
                     }
                 });
             }
-            
+
             // Enhance with category details
             const enhanced = await this.enhanceWithCategoryDetails([mediaMeta.toObject()]);
-            
+
             if (!isAdmin) {
                 // Notify admins about new media upload
                 socketService.notifyMediaUpload(mediaMeta);
-                
+
                 // Notify user about upload status
                 socketService.notifyMediaStatus(
                     mediaMeta.userId,
@@ -159,7 +205,7 @@ class MediaMetaService {
                     const videos = await Video.find({ 'videoSpecific.mediaMetaId': { $in: videoIds } })
                         .select('videoSpecific.duration views')
                         .lean();
-                    
+
                     const videoMap = new Map(videos.map(v => [v.videoSpecific.mediaMetaId, v]));
                     // console.log("🚀 ~ MediaMetaService ~ getMediaMetadata ~ videoMap:", videoMap);
                     result.results = result.results.map(item => ({
@@ -172,7 +218,7 @@ class MediaMetaService {
                     const reels = await Reel.find({ 'reelSpecific.mediaMetaId': { $in: reelIds } })
                         .select('reelSpecific.duration views')
                         .lean();
-                    
+
                     const reelMap = new Map(reels.map(r => [r.reelSpecific.mediaMetaId, r]));
                     result.results = result.results.map(item => ({
                         ...item,
@@ -195,20 +241,20 @@ class MediaMetaService {
      */
     async getMediaMetadataById(id) {
         const mediaMeta = await MediaMeta.findOne({ _id: id }).lean().exec();
-        
+
         if (!mediaMeta) {
             throw new ApiError(httpStatus.NOT_FOUND, 'Media metadata not found')
         }
-    
+
         delete mediaMeta.__v
-    
+
         const formatted = formatApiResult(mediaMeta);
         const [enhanced] = await this.enhanceWithFileUrls([formatted]);
         const [withCategory] = await this.enhanceWithCategoryDetails([enhanced]);
         return withCategory;
     }
-    
-    
+
+
     /**
    * Enhance media metadata with file URLs
    * @param {Array} mediaMetadata - Array of media metadata objects
@@ -287,7 +333,7 @@ class MediaMetaService {
                     const thumbnailFile = files.find(
                         (f) =>
                             (f.fileId && f.fileId.includes(item.thumbnailId.split(".")[0])) ||
-              (f.blobName && f.blobName.includes(item.thumbnailId))
+                            (f.blobName && f.blobName.includes(item.thumbnailId))
                     );
                     if (thumbnailFile) thumbnailUrl = thumbnailFile.url;
                 }
@@ -296,7 +342,7 @@ class MediaMetaService {
                     const mediaFile = files.find(
                         (f) =>
                             (f.fileId && f.fileId.includes(item.mediaFileId.split(".")[0])) ||
-              (f.blobName && f.blobName.includes(item.mediaFileId))
+                            (f.blobName && f.blobName.includes(item.mediaFileId))
                     );
                     if (mediaFile) mediaFileUrl = mediaFile.url;
                 }
@@ -531,14 +577,14 @@ class MediaMetaService {
             const categoryIds = [...new Set(mediaMetadata.map(item => item.category))]
                 .filter(id => id && mongoose.Types.ObjectId.isValid(id))
                 .map(id => new mongoose.Types.ObjectId(id));
-            
+
             if (categoryIds.length === 0) {
                 return mediaMetadata;
             }
-            
+
             // Fetch all categories in one query
             const categories = await Category.find({ _id: { $in: categoryIds } }).lean();
-            
+
             // Create a map for quick lookup
             const categoryMap = {};
             categories.forEach(category => {
