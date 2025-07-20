@@ -164,8 +164,8 @@ exports.getAllVideos = async (options) => {
         const query = { page, limit, sortBy: `${sortBy}:${sortOrder}`, lean: true }
         const result = await getVideoMetadata(filter, query);
         return result;
-    } catch {
-
+    } catch(error) {
+        console.error(error);
     }
 };
 
