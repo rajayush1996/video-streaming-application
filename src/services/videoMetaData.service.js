@@ -23,6 +23,7 @@ async function createVideoMetadata(data) {
  */
 async function getVideoMetadata(filter = {}, query) {
     try {
+        filter.processingStatus = 'done';
         return await VideoMetadata.paginate(filter, query);
     } catch (err) {
         throw new Error(`Error fetching VideoMetadata: ${err.message}`);
