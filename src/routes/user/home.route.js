@@ -5,7 +5,9 @@ const router = express.Router();
 const homeController = require('../../controllers/home.controller');
 // const homeValidation = require('../../validations/home.validation');
 
-router.get('/trending', homeController.getTrendingVideos);
+router.get('/videos', homeController.getTrendingVideos);
+// router.get('/trending-videos', homeController.getTrendingVideos);
+
 
 
 /**

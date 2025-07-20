@@ -21,15 +21,16 @@ exports.getHomeFeed = async (req, res, next) => {
         // logger.info('Fetching home feed with options:', options);
 
         // Get home feed data
-        const homeResponse = await homeService.getHomeFeed(req.body);
+        const homeResponse = await homeService.getHomeDetails(req.body);
 
         // Log success
         logger.info('Home feed fetched successfully');
 
         // Send response
-        responseHandler(res, httpStatus.OK, 'Home feed retrieved successfully', 
-            homeResponse
-        );
+        // responseHandler(res, httpStatus.OK, 'Home feed retrieved successfully', 
+        //     homeResponse
+        // );
+        return homeResponse;
     } catch (error) {
         logger.error('Error getting home feed:', error);
         next(error);
@@ -38,6 +39,25 @@ exports.getHomeFeed = async (req, res, next) => {
 
 
 exports.getTrendingVideos = async (req, res, next) => {
+    try {
+        // type='all' for which type trending, category, mostly Viewed
+        const { page = 1, limit = 10, category=null,  } = req.query;
+        const filter = {
+            page: Number(page),
+            limit: Number(limit),
+        }
+        if(category) {
+            filter.category = category
+        }
+        const trendingVideos = await homeService.getTrendingVideos(filter);
+        responseHandler(res, httpStatus.OK, 'Trending videos retrieved successfully', trendingVideos);
+    } catch (error) {
+        logger.error('Error getting trending videos:', error);
+        next(error);
+    }
+};
+
+exports.getTrendingReels = async (req, res, next) => {
     try {
         const { page = 1, limit = 10, category } = req.query;
         const trendingVideos = await homeService.getTrendingVideos({

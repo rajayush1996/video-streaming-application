@@ -73,8 +73,38 @@ const downloadFromBunnyCDN = async (bunnyPath) => {
     }
 };
 
+
+
+/**
+ * Fetch video play info from BunnyCDN based on libraryId and guid
+ * @param {Number} libraryId - ID of the BunnyCDN video library
+ * @param {String} guid - GUID of the video
+ * @param {Number} [expires=0] - Expiration timestamp or 0 for no expiration
+ * @returns {Promise<Object>} - JSON response from BunnyCDN
+ */
+
+
+const BUNNY_STREAM_LIBRARY_ID = process.env.BUNNY_STREAM_LIBRARY_ID;
+
+
+async function fetchVideoDataByGuid(guid, expires = 0) {
+    const url = `https://video.bunnycdn.com/library/${BUNNY_STREAM_LIBRARY_ID}/videos/${guid}/play?expires=${expires}`;
+    const options = { method: 'GET', headers: { accept: 'application/json' } };
+
+    try {
+        const response = await fetch(url, options);
+        if (!response.ok) {
+            throw new Error(`BunnyCDN API error: ${response.status} ${response.statusText}`);
+        }
+        return await response.json();
+    } catch (err) {
+        throw new Error(`Error fetching video data for GUID ${guid}: ${err.message}`);
+    }
+}
+
 module.exports = {
     uploadToBunnyCDN,
     deleteFromBunnyCDN,
     downloadFromBunnyCDN,
+    fetchVideoDataByGuid
 };

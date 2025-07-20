@@ -1,12 +1,10 @@
 const Video = require("../models/video.model");
 const MediaMeta = require("../models/mediaMeta.model");
-const Category = require("../models/category.model");
 const videoEventService = require("./videoEvent.service");
 const logger = require("../features/logger");
 const { ApiError } = require('../features/error');
 const httpStatus = require("http-status");
-const UserCredential = require('../models/userCredentials.model');
-const File = require("../models/file.model");
+const { getVideoMetadata, getVideoMetaDataById } = require("./videoMetaData.service");
 
 /**
  * Create a new video
@@ -70,90 +68,104 @@ exports.createVideo = async (videoData, userId) => {
  * @returns {Promise<Object>} Videos data with pagination
  */
 exports.getAllVideos = async (options) => {
+    // try {
+    //     const { page = 1, limit = 10, category, sortBy = 'createdAt', sortOrder = 'desc', featured } = options;
+    //     const skip = (page - 1) * limit;
+
+    //     // Build query
+    //     const query = { status: 'published' };
+    //     if (category) query.category = category;
+    //     if (featured) query.isFeatured = true;
+
+    //     // Build sort object
+    //     const sort = {};
+    //     sort[sortBy] = sortOrder === 'asc' ? 1 : -1;
+
+    //     // First fetch videos with basic info
+    //     const videos = await Video.find(query)
+    //         .sort(sort)
+    //         .skip(skip)
+    //         .limit(limit)
+    //         .lean();
+
+    //     // Get total count
+    //     const total = await Video.countDocuments(query);
+
+    //     // Collect all MediaMeta IDs
+    //     const mediaMetaIds = videos.map(video => video.videoSpecific.mediaMetaId);
+
+    //     // Fetch all MediaMeta documents in one query
+    //     const mediaMetaMap = new Map();
+    //     const mediaMetaDocs = await MediaMeta.find({ _id: { $in: mediaMetaIds } })
+    //         .select('_id url type metadata mediaFileId thumbnailId')
+    //         .lean();
+    //     mediaMetaDocs.forEach(doc => mediaMetaMap.set(doc._id.toString(), doc));
+    //     console.log("🚀 ~ :105 ~ exports.getAllVideos= ~ mediaMetaDocs:", mediaMetaDocs)
+
+    //     // Collect all file IDs
+    //     const fileIds = new Set();
+    //     mediaMetaDocs.forEach(doc => {
+    //         if (doc.mediaFileId) fileIds.add(doc.mediaFileId);
+    //         if (doc.thumbnailId) fileIds.add(doc.thumbnailId);
+    //     });
+
+    //     // Fetch all file documents in one query
+    //     const fileMap = new Map();
+    //     const fileDocs = await File.find({ fileId: { $in: Array.from(fileIds) } })
+    //         .select('fileId url type metadata')
+    //         .lean();
+    //     fileDocs.forEach(doc => fileMap.set(doc.fileId, doc));
+
+    //     // Format videos with populated data
+    //     const formattedVideos = videos.map(video => {
+    //         const mediaMeta = mediaMetaMap.get(video.videoSpecific.mediaMetaId.toString());
+    //         const mediaFile = mediaMeta ? fileMap.get(mediaMeta.mediaFileId) : null;
+    //         const thumbnailFile = mediaMeta ? fileMap.get(mediaMeta.thumbnailId) : null;
+
+    //         return {
+    //             ...video,
+    //             mediaFile: mediaFile ? {
+    //                 url: mediaFile.url,
+    //                 type: mediaFile.type,
+    //                 metadata: mediaFile.metadata
+    //             } : null,
+    //             thumbnail: thumbnailFile ? {
+    //                 url: thumbnailFile.url,
+    //                 type: thumbnailFile.type,
+    //                 metadata: thumbnailFile.metadata
+    //             } : null,
+    //             duration: video.videoSpecific.duration || '00:00:00'
+    //         };
+    //     });
+
+    //     const totalPages = Math.ceil(total / limit);
+    //     const hasMore    = skip + limit < total;
+
+    //     return {
+    //         results: formattedVideos,
+    //         skip,
+    //         limit,
+    //         hasMore,
+    //         totalPages,
+    //         totalResults: total
+    //     };
+    // } catch (error) {
+    //     logger.error('Error in getAllVideos:', error);
+    //     throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, 'Error fetching videos');
+    // }
+
     try {
-        const { page = 1, limit = 10, category, sortBy = 'createdAt', sortOrder = 'desc', featured } = options;
-        const skip = (page - 1) * limit;
+        //recommend true based on logic
+        const { page = 1, limit = 10, category, sortBy = 'createdAt', sortOrder = 'desc' } = options;
+        const filter = {}
+        if(category) {
+            filter.category = category;
+        }
+        const query = { page, limit, sortBy: `${sortBy}:${sortOrder}`, lean: true }
+        const result = await getVideoMetadata(filter, query);
+        return result;
+    } catch {
 
-        // Build query
-        const query = { status: 'published' };
-        if (category) query.category = category;
-        if (featured) query.isFeatured = true;
-
-        // Build sort object
-        const sort = {};
-        sort[sortBy] = sortOrder === 'asc' ? 1 : -1;
-
-        // First fetch videos with basic info
-        const videos = await Video.find(query)
-            .sort(sort)
-            .skip(skip)
-            .limit(limit)
-            .lean();
-
-        // Get total count
-        const total = await Video.countDocuments(query);
-
-        // Collect all MediaMeta IDs
-        const mediaMetaIds = videos.map(video => video.videoSpecific.mediaMetaId);
-
-        // Fetch all MediaMeta documents in one query
-        const mediaMetaMap = new Map();
-        const mediaMetaDocs = await MediaMeta.find({ _id: { $in: mediaMetaIds } })
-            .select('_id url type metadata mediaFileId thumbnailId')
-            .lean();
-        mediaMetaDocs.forEach(doc => mediaMetaMap.set(doc._id.toString(), doc));
-        console.log("🚀 ~ :105 ~ exports.getAllVideos= ~ mediaMetaDocs:", mediaMetaDocs)
-
-        // Collect all file IDs
-        const fileIds = new Set();
-        mediaMetaDocs.forEach(doc => {
-            if (doc.mediaFileId) fileIds.add(doc.mediaFileId);
-            if (doc.thumbnailId) fileIds.add(doc.thumbnailId);
-        });
-
-        // Fetch all file documents in one query
-        const fileMap = new Map();
-        const fileDocs = await File.find({ fileId: { $in: Array.from(fileIds) } })
-            .select('fileId url type metadata')
-            .lean();
-        fileDocs.forEach(doc => fileMap.set(doc.fileId, doc));
-
-        // Format videos with populated data
-        const formattedVideos = videos.map(video => {
-            const mediaMeta = mediaMetaMap.get(video.videoSpecific.mediaMetaId.toString());
-            const mediaFile = mediaMeta ? fileMap.get(mediaMeta.mediaFileId) : null;
-            const thumbnailFile = mediaMeta ? fileMap.get(mediaMeta.thumbnailId) : null;
-
-            return {
-                ...video,
-                mediaFile: mediaFile ? {
-                    url: mediaFile.url,
-                    type: mediaFile.type,
-                    metadata: mediaFile.metadata
-                } : null,
-                thumbnail: thumbnailFile ? {
-                    url: thumbnailFile.url,
-                    type: thumbnailFile.type,
-                    metadata: thumbnailFile.metadata
-                } : null,
-                duration: video.videoSpecific.duration || '00:00:00'
-            };
-        });
-
-        const totalPages = Math.ceil(total / limit);
-        const hasMore    = skip + limit < total;
-
-        return {
-            results: formattedVideos,
-            skip,
-            limit,
-            hasMore,
-            totalPages,
-            totalResults: total
-        };
-    } catch (error) {
-        logger.error('Error in getAllVideos:', error);
-        throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, 'Error fetching videos');
     }
 };
 
@@ -162,68 +174,78 @@ exports.getAllVideos = async (options) => {
  * @param {string} videoId - Video ID
  * @returns {Promise<Object>} Video data
  */
+// exports.getVideoById = async (videoId) => {
+//     try {
+//         // First fetch video with basic info
+//         const video = await Video.findById(videoId).lean();
+
+//         if (!video) {
+//             throw new ApiError(httpStatus.NOT_FOUND, 'Video not found');
+//         }
+
+//         // Get MediaMeta document
+//         const mediaMeta = await MediaMeta.findById(video.videoSpecific.mediaMetaId)
+//             .select('_id url type metadata mediaFileId thumbnailId')
+//             .lean();
+
+//         if (!mediaMeta) {
+//             throw new ApiError(httpStatus.NOT_FOUND, 'Media metadata not found');
+//         }
+
+//         // Get file documents
+//         const fileIds = new Set();
+//         if (mediaMeta.mediaFileId) fileIds.add(mediaMeta.mediaFileId);
+//         if (mediaMeta.thumbnailId) fileIds.add(mediaMeta.thumbnailId);
+
+//         const fileDocs = await File.find({ fileId: { $in: Array.from(fileIds) } })
+//             .select('fileId url type metadata')
+//             .lean();
+
+//         const fileMap = new Map();
+//         fileDocs.forEach(doc => fileMap.set(doc.fileId, doc));
+
+//         // Get user data
+//         const user = await UserCredential.findById(video.author)
+//             .select('_id username profilePicture displayName bio')
+//             .lean();
+
+//         // Get category data
+//         const category = await Category.findById(video.category)
+//             .select('_id name description')
+//             .lean();
+
+//         // Format video with populated data
+//         return {
+//             ...video,
+//             user: user || null,
+//             category: category || null,
+//             mediaFile: fileMap.get(mediaMeta.mediaFileId) ? {
+//                 url: fileMap.get(mediaMeta.mediaFileId).url,
+//                 type: fileMap.get(mediaMeta.mediaFileId).type,
+//                 metadata: fileMap.get(mediaMeta.mediaFileId).metadata
+//             } : null,
+//             thumbnail: fileMap.get(mediaMeta.thumbnailId) ? {
+//                 url: fileMap.get(mediaMeta.thumbnailId).url,
+//                 type: fileMap.get(mediaMeta.thumbnailId).type,
+//                 metadata: fileMap.get(mediaMeta.thumbnailId).metadata
+//             } : null,
+//             duration: video.videoSpecific.duration || '00:00:00'
+//         };
+//     } catch (error) {
+//         logger.error('Error in getVideoById:', error);
+//         throw error;
+//     }
+// };
+
 exports.getVideoById = async (videoId) => {
-    try {
-        // First fetch video with basic info
-        const video = await Video.findById(videoId).lean();
-
-        if (!video) {
-            throw new ApiError(httpStatus.NOT_FOUND, 'Video not found');
-        }
-
-        // Get MediaMeta document
-        const mediaMeta = await MediaMeta.findById(video.videoSpecific.mediaMetaId)
-            .select('_id url type metadata mediaFileId thumbnailId')
-            .lean();
-
-        if (!mediaMeta) {
-            throw new ApiError(httpStatus.NOT_FOUND, 'Media metadata not found');
-        }
-
-        // Get file documents
-        const fileIds = new Set();
-        if (mediaMeta.mediaFileId) fileIds.add(mediaMeta.mediaFileId);
-        if (mediaMeta.thumbnailId) fileIds.add(mediaMeta.thumbnailId);
-
-        const fileDocs = await File.find({ fileId: { $in: Array.from(fileIds) } })
-            .select('fileId url type metadata')
-            .lean();
-
-        const fileMap = new Map();
-        fileDocs.forEach(doc => fileMap.set(doc.fileId, doc));
-
-        // Get user data
-        const user = await UserCredential.findById(video.author)
-            .select('_id username profilePicture displayName bio')
-            .lean();
-
-        // Get category data
-        const category = await Category.findById(video.category)
-            .select('_id name description')
-            .lean();
-
-        // Format video with populated data
-        return {
-            ...video,
-            user: user || null,
-            category: category || null,
-            mediaFile: fileMap.get(mediaMeta.mediaFileId) ? {
-                url: fileMap.get(mediaMeta.mediaFileId).url,
-                type: fileMap.get(mediaMeta.mediaFileId).type,
-                metadata: fileMap.get(mediaMeta.mediaFileId).metadata
-            } : null,
-            thumbnail: fileMap.get(mediaMeta.thumbnailId) ? {
-                url: fileMap.get(mediaMeta.thumbnailId).url,
-                type: fileMap.get(mediaMeta.thumbnailId).type,
-                metadata: fileMap.get(mediaMeta.thumbnailId).metadata
-            } : null,
-            duration: video.videoSpecific.duration || '00:00:00'
-        };
+    try{
+        return await getVideoMetaDataById(videoId);
     } catch (error) {
-        logger.error('Error in getVideoById:', error);
-        throw error;
+        throw new Error(`Error fetching VideoMetadata: ${error.message}`);
+
     }
-};
+}
+
 
 /**
  * Update a video

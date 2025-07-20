@@ -44,7 +44,7 @@ const updateUploadStatus = (uploadId, status) => {
 const updateUploadByUploadId = (uploadId, updateData) => {
     const upload = uploads[uploadId];
     if (upload) {
-        Object.assign(upload, {...upload, fileDetails: updateData});
+        Object.assign(upload, { ...upload, fileDetails: updateData });
     }
 };
 
@@ -79,6 +79,7 @@ const deleteLocalTempDir = (tempDirPath) => {
         fs.rmSync(tempDirPath, { recursive: true, force: true });
     }
 };
+
 
 
 
