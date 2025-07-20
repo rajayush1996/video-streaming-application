@@ -156,11 +156,27 @@ exports.getAllVideos = async (options) => {
 
     try {
         //recommend true based on logic
-        const { page = 1, limit = 10, category, sortBy = 'createdAt', sortOrder = 'desc' } = options;
+        const { page = 1, limit = 10, category, sortBy = 'createdAt', sortOrder = 'desc', recommend, selectedMediaId = '' } = options;
         const filter = {}
         if(category) {
             filter.category = category;
         }
+        console.log("🚀 ~ :183 ~ exports.getAllVideos= ~ recommend:", recommend)
+        console.log("🚀 ~ :183 ~ exports.getAllVideos= ~ recommend:", selectedMediaId)
+
+
+        // if recommend:true and a valid selectedMediaId, override filter
+        if (recommend && selectedMediaId) {
+            // fetch the “seed” video’s metadata
+            const seedMeta = await getVideoMetaDataById(selectedMediaId);
+            if (seedMeta) {
+                // restrict to the same category…
+                filter.category = seedMeta.category;
+                // …but exclude the seed video itself
+                filter.mediaId = { $ne: selectedMediaId };
+            }
+        }
+        
         const query = { page, limit, sortBy: `${sortBy}:${sortOrder}`, lean: true }
         const result = await getVideoMetadata(filter, query);
         return result;

@@ -12,7 +12,7 @@ const logger = require('../features/logger');
  */
 exports.getAllVideos = async (req, res, next) => {
     try {
-        const { page, limit, category, sortBy, sortOrder, featured } = req.query;
+        const { page, limit, category, sortBy, sortOrder, recommend, selectedMediaId } = req.query;
         
         // Parse and validate query parameters
         const options = {
@@ -21,7 +21,8 @@ exports.getAllVideos = async (req, res, next) => {
             category: category || undefined,
             sortBy: sortBy || 'createdAt',
             sortOrder: sortOrder || 'desc',
-            featured: featured === 'true'
+            recommend,
+            selectedMediaId
         };
 
         // Validate page and limit
