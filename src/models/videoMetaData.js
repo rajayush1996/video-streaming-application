@@ -5,8 +5,8 @@ const auditPlugin = require('./plugins/audit.plugin');
 
 const VideoMetadataSchema = new mongoose.Schema({
     // BunnyCDN identifiers
-    libraryId:   { type: Number,   required: true, index: true },
-    guid:        { type: String,   required: true, unique: true },
+    libraryId:   { type: Number, index: true },
+    guid:        { type: String, required: true, unique: true },
 
     // Basic info
     title:       { type: String },
@@ -14,7 +14,7 @@ const VideoMetadataSchema = new mongoose.Schema({
     category:    { type: String },
 
     // URLs from BunnyCDN
-    videoUrl:    { type: String,   required: true },
+    videoUrl:    { type: String },
     previewUrl:  { type: String },
     thumbnailUrl:{ type: String },
 

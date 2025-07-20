@@ -37,8 +37,24 @@ async function getVideoMetaDataById(id) {
     }
 }
 
+
+/**
+ * Updates an existing video metadata record by _id.
+ * @param {string} id   the document’s _id
+ * @param {Object} update  the fields to set (can include processingStatus, errorMessage, and all other meta fields)
+ * @returns {Promise<Object|null>} the updated document (or null if not found)
+ */
+async function updateVideoMetadata(id, update) {
+    return VideoMetadata.findByIdAndUpdate(
+        id,
+        { $set: update },
+        { new: true, runValidators: true }
+    ).exec();
+}
+
 module.exports = {
     createVideoMetadata,
     getVideoMetadata,
     getVideoMetaDataById,
+    updateVideoMetadata
 };
