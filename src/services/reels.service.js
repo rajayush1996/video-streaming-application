@@ -3,7 +3,8 @@ const File = require('../models/file.model');
 const httpStatus = require('http-status');
 const logger = require('../features/logger');
 const { ApiError } = require('../features/error');
-const { formatApiResult } = require('../utils/formatApiResult.util');
+// const { formatApiResult } = require('../utils/formatApiResult.util');
+const { getVideoMetadata } = require('./videoMetaData.service');
 
 /**
  * Reels Service - Handles all reels-specific operations
@@ -15,43 +16,53 @@ class ReelsService {
      * @param {Object} options - Query options like sort, pagination
      * @returns {Promise<Object>} Paginated reels
      */
-    async getAllReels(filter = {}, options = {}) {
-        try {
-            // Set media type to 'reel' for reels-specific queries
-            filter.mediaType = 'reel';
-            filter.isDeleted = false;
+    // async getAllReels(filter = {}, options = {}) {
+    //     try {
+    //         // Set media type to 'reel' for reels-specific queries
+    //         filter.mediaType = 'reel';
+    //         filter.isDeleted = false;
 
-            const reels = await MediaMeta.paginate(filter, options);
-            // Format results and enhance with file URLs
-            if (reels.results && reels.results.length > 0) {
-                // Convert each reels to plain object and remove mongoose internals
-                const plainResults = reels.results.map(doc => {
-                    const plainObject = doc.toObject ? doc.toObject() : doc;
-                    delete plainObject.__v;
-                    delete plainObject.$__;
-                    delete plainObject.$isNew;
-                    delete plainObject._doc;
-                    return plainObject;
-                });
+    //         const reels = await MediaMeta.paginate(filter, options);
+    //         // Format results and enhance with file URLs
+    //         if (reels.results && reels.results.length > 0) {
+    //             // Convert each reels to plain object and remove mongoose internals
+    //             const plainResults = reels.results.map(doc => {
+    //                 const plainObject = doc.toObject ? doc.toObject() : doc;
+    //                 delete plainObject.__v;
+    //                 delete plainObject.$__;
+    //                 delete plainObject.$isNew;
+    //                 delete plainObject._doc;
+    //                 return plainObject;
+    //             });
                 
-                reels.results = formatApiResult(plainResults);
-                const enhancedResults = await this.enhanceWithFileUrls(reels.results);
-                reels.results = enhancedResults;
-            }
+    //             reels.results = formatApiResult(plainResults);
+    //             const enhancedResults = await this.enhanceWithFileUrls(reels.results);
+    //             reels.results = enhancedResults;
+    //         }
 
-            // Enhance reels with file URLs
-            const enhancedResults = await this.enhanceWithFileUrls(reels.results);
+    //         // Enhance reels with file URLs
+    //         const enhancedResults = await this.enhanceWithFileUrls(reels.results);
 
-            return {
-                ...reels,
-                results: enhancedResults
-            };
-        } catch (error) {
+    //         return {
+    //             ...reels,
+    //             results: enhancedResults
+    //         };
+    //     } catch (error) {
+    //         logger.error('Error fetching reels:', error);
+    //         throw error;
+    //     }
+    // }
+
+    async getAllReels(filter = {}, options = {} ) {
+        try {
+            filter.mediaType = 'reel'
+            const result = await getVideoMetadata(filter, options);
+            return result;
+        } catch(error) {
             logger.error('Error fetching reels:', error);
             throw error;
         }
     }
-
     /**
      * Get a single reel by ID
      * @param {string} id - Reel ID

@@ -44,7 +44,7 @@ const profileController = require('../../controllers/profile.controller');
  *       404:
  *         description: User not found
  */
-router.get('/me', userController.getUserById);
+router.get('/me', auth('user'), userController.getUserById);
 
 /**
  * @swagger

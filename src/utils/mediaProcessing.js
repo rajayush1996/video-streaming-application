@@ -2,7 +2,7 @@ const logger = require('../features/logger');
 const { poll } = require('../utils/poll');
 
 
-const VIDEO_READY_STATUS = 4;
+const VIDEO_READY_STATUS = 3;
 /**
  * Starts a fire‑and‑forget loop that polls until the media is ready,
  * then updates the record to “completed” or “error”.

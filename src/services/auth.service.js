@@ -39,6 +39,7 @@ class AuthService {
                 isEmailVerified: false,
                 emailVerificationToken,
                 emailVerificationExpires,
+                statud: 'Inactive'
             });
 
             // Create user profile
@@ -79,6 +80,7 @@ class AuthService {
                 emailVerified: true,
                 emailVerificationToken: null,
                 emailVerificationExpires: null,
+                status: 'active'
             });
 
             return { message: 'Email verified successfully. You can now log in.', success: true };

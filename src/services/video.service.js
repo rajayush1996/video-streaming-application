@@ -161,9 +161,7 @@ exports.getAllVideos = async (options) => {
         if(category) {
             filter.category = category;
         }
-        console.log("🚀 ~ :183 ~ exports.getAllVideos= ~ recommend:", recommend)
-        console.log("🚀 ~ :183 ~ exports.getAllVideos= ~ recommend:", selectedMediaId)
-
+        filter.mediaType = 'video'
 
         // if recommend:true and a valid selectedMediaId, override filter
         if (recommend && selectedMediaId) {
