@@ -156,12 +156,23 @@ exports.getAllVideos = async (options) => {
 
     try {
         //recommend true based on logic
-        const { page = 1, limit = 10, category, recommend, selectedMediaId = '' } = options;
+        const { page = 1, limit = 10, category, recommend, selectedMediaId = '', search= '' } = options;
         const filter = {}
         if(category && category !== 'all') {
             filter.category = category;
         }
         filter.mediaType = 'video'
+
+        console.log("🚀 ~ :193 ~ exports.getAllVideos= ~ search:", search)
+
+        // add search‐by‐title or description
+        if (search.trim()) {
+            const re = new RegExp(search.trim(), "i");
+            filter.$or = [
+                { title: { $regex: re } },
+                { description: { $regex: re } },
+            ];
+        }
 
         // if recommend:true and a valid selectedMediaId, override filter
         if (recommend && selectedMediaId) {
