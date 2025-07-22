@@ -4,123 +4,105 @@ const paginate = schema => {
     /**
    * @typedef {Object} QueryResult
    * @property {Document[]} results - Results found
-   * @property {number} page - Current page
-   * @property {number} limit - Maximum number of results per page
-   * @property {boolean} hasMore - True if we have more records
+   * @property {number} skip - Number of documents skipped
+   * @property {number|null} limit - Max number of results per page (null = no limit)
+   * @property {boolean} hasMore - True if there are more records
    * @property {number} totalPages - Total number of pages
    * @property {number} totalResults - Total number of documents
+   * @property {number} currentPage - Current page number
    */
     /**
-   * Query for documents with pagination
+   * Query for documents with pagination (+ optional shuffle)
    * @param {Object} [filter] - Mongo filter
    * @param {Object} [options] - Query options
-   * @param {string} [options.sortBy] - Sorting criteria using the format: sortField:(desc|asc). Multiple sorting criteria should be separated by commas (,)
-   * @param {string} [options.populate] - Populate data fields. Hierarchy of fields should be separated by (.). Multiple populating criteria should be separated by commas (,)
-   * @param {number} [options.limit] - Maximum number of results per page (default = 10)
-   * @param {number} [options.page] - Current page (default = 1)
-   * @param {number} [options.lean] - true/false
-   * @param {number} [options.projection] - fields to return
-   * @param {number} [options.populateProjection] - fields to return for populated fields
+   * @param {string} [options.sortBy] - Field:(asc|desc), comma‑separated
+   * @param {string} [options.populate] - Paths to populate, comma‑separated
+   * @param {number} [options.limit=10] - Max results per page
+   * @param {number} [options.page=1] - Page number
+   * @param {boolean|Object} [options.lean=false] - lean mode
+   * @param {Object} [options.projection={}] - fields to return
+   * @param {Object} [options.populateProjection={}] - fields for populated docs
+   * @param {boolean} [options.shuffle=false] - if true, randomly shuffle the page’s results
    * @returns {Promise<QueryResult>}
    */
-    schema.statics.paginate = async function (filter, options) {
+    schema.statics.paginate = async function (filter = {}, options = {}) {
         const defaultLimit = 10;
         const maxLimit = 100;
-        let sort = '';
+
+        // 1) build sort string
+        let sort = 'createdAt';
         if (options.sortBy) {
-            const sortingCriteria = [];
-            options.sortBy.split(',').forEach(sortOption => {
-                const [key, order] = sortOption.split(':');
-                sortingCriteria.push((order === 'desc' ? '-' : '') + key);
-            });
-            sort = sortingCriteria.join(' ');
-        } else {
-            sort = 'createdAt';
+            sort = options.sortBy
+                .split(',')
+                .map(pair => {
+                    const [key, order] = pair.split(':');
+                    return (order === 'desc' ? '-' : '') + key;
+                })
+                .join(' ');
         }
 
+        // 2) lean flag
         if (options.lean === true) {
             options.lean = { getters: true };
         }
+        const { projection = {}, lean = false, shuffle = false } = options;
 
-        const { projection = {}, lean = false } = options;
-
-        const page
-      = options.page && parseInt(options.page, 10) > 0
-      	? parseInt(options.page, 10)
-      	: 1;
-
-        let limit = parseInt(options.limit, 10) || defaultLimit;
-        let skip = null;
-        if (limit < -1) {
-            limit = defaultLimit;
-        } else if (limit > maxLimit) {
-            limit = maxLimit;
-        }
-
+        // 3) page & limit
+        const page = Number(options.page) > 0 ? Number(options.page) : 1;
+        let limit = Number(options.limit) || defaultLimit;
+        if (limit < -1) limit = defaultLimit;
+        if (limit > maxLimit) limit = maxLimit;
+        const skip = limit > 0 ? (page - 1) * limit : null;
         if (limit === -1) {
-            skip = null;
             limit = null;
         }
 
-        if (limit > 0) {
-            skip = (page - 1) * limit;
-        }
-
+        // 4) count + docs queries
         const countPromise = this.countDocuments(filter).exec();
-        let docsPromise = this.find(filter)
+        let docsQuery = this.find(filter)
             .sort(sort)
             .skip(skip)
             .limit(limit)
             .select(projection)
             .lean(lean);
-        options.populateProjection = options.populateProjection || {};
+
+        // 5) populate if needed
         if (options.populate) {
-            options.populate.split(',').forEach(populateOption => {
-                docsPromise = docsPromise.populate({
-                    path: populateOption
-                        .split('.')
-                        .reverse()
-                        .reduce((a, b) => ({
-                            path: b,
-                            populate: a,
-                        })),
-                    select: options.populateProjection,
+            options.populate.split(',').forEach(path => {
+                docsQuery = docsQuery.populate({
+                    path: path.split('.').reverse().reduce((a, b) => ({ path: b, populate: a })),
+                    select: options.populateProjection || {},
                 });
             });
         }
 
-        docsPromise = docsPromise.exec();
+        // 6) execute both
+        const [ totalResults, results ] = await Promise.all([
+            countPromise,
+            docsQuery.exec()
+        ]);
 
-        return Promise.all([countPromise, docsPromise]).then(values => {
-            const [totalResults, results] = values;
-            limit = limit || -1;
-            let totalPages = 1;
-            if (limit) {
-                totalPages = Math.ceil(totalResults / limit);
+        // 7) optionally shuffle results in‑memory
+        if (shuffle && Array.isArray(results)) {
+            for (let i = results.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [results[i], results[j]] = [results[j], results[i]];
             }
+        }
 
-            let hasMore = false;
-            if (skip + limit < totalResults) {
-                hasMore = true;
-            }
+        // 8) build pagination meta
+        const totalPages = limit ? Math.ceil(totalResults / limit) : 1;
+        const hasMore = limit && skip + limit < totalResults;
 
-            if (limit === -1) {
-                hasMore = false;
-                totalPages = 1;
-                skip = 0;
-            }
-
-            const result = {
-                results,
-                skip,
-                limit,
-                hasMore,
-                totalPages,
-                totalResults,
-                currentPage: page,
-            };
-            return Promise.resolve(result);
-        });
+        return {
+            results,
+            skip,
+            limit,
+            hasMore,
+            totalPages,
+            totalResults,
+            currentPage: page
+        };
     };
 };
 

@@ -24,6 +24,9 @@ async function createVideoMetadata(data) {
 async function getVideoMetadata(filter = {}, query) {
     try {
         filter.processingStatus = 'done';
+        if(!query.sortBy) {
+            query.shuffle = true
+        }
         return await VideoMetadata.paginate(filter, query);
     } catch (err) {
         throw new Error(`Error fetching VideoMetadata: ${err.message}`);
