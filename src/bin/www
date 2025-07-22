@@ -117,7 +117,7 @@ async function onListening() {
         try {
             await connectDB();
             logger.info('Database connection established successfully');
-            await connectRabbitMQ();
+            // await connectRabbitMQ();
         } catch (dbErr) {
             logger.error('Database connection failed:', dbErr.message);
             process.exit(1);  // Exit if database connection fails

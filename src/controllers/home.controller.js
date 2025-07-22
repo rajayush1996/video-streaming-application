@@ -41,13 +41,18 @@ exports.getHomeFeed = async (req, res, next) => {
 exports.getTrendingVideos = async (req, res, next) => {
     try {
         // type='all' for which type trending, category, mostly Viewed
-        const { page = 1, limit = 10, category=null,  } = req.query;
+        const { page = 1, limit = 10, category=null, type } = req.query;
         const filter = {
             page: Number(page),
             limit: Number(limit),
         }
         if(category) {
             filter.category = category
+        }
+        if(type === 'reels') {
+            filter.mediaType = 'reel'
+        } else if(type === 'videos'){
+            filter.mediaType = 'video'
         }
         const trendingVideos = await homeService.getTrendingVideos(filter);
         responseHandler(res, httpStatus.OK, 'Trending videos retrieved successfully', trendingVideos);

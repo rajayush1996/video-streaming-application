@@ -156,7 +156,7 @@ exports.getAllVideos = async (options) => {
 
     try {
         //recommend true based on logic
-        const { page = 1, limit = 10, category, sortBy = 'createdAt', sortOrder = 'desc', recommend, selectedMediaId = '' } = options;
+        const { page = 1, limit = 10, category, recommend, selectedMediaId = '' } = options;
         const filter = {}
         if(category) {
             filter.category = category;
@@ -175,7 +175,7 @@ exports.getAllVideos = async (options) => {
             }
         }
         
-        const query = { page, limit, sortBy: `${sortBy}:${sortOrder}`, lean: true }
+        const query = { page, limit, lean: true }
         const result = await getVideoMetadata(filter, query);
         return result;
     } catch(error) {

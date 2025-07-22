@@ -3,35 +3,22 @@
 const paginate = schema => {
     /**
    * @typedef {Object} QueryResult
-   * @property {Document[]} results - Results found
-   * @property {number} skip - Number of documents skipped
-   * @property {number|null} limit - Max number of results per page (null = no limit)
-   * @property {boolean} hasMore - True if there are more records
-   * @property {number} totalPages - Total number of pages
-   * @property {number} totalResults - Total number of documents
-   * @property {number} currentPage - Current page number
+   * @property {Document[]} results
+   * @property {number|null} skip
+   * @property {number|null} limit
+   * @property {boolean} hasMore
+   * @property {number} totalPages
+   * @property {number} totalResults
+   * @property {number} currentPage
    */
-    /**
-   * Query for documents with pagination (+ optional shuffle)
-   * @param {Object} [filter] - Mongo filter
-   * @param {Object} [options] - Query options
-   * @param {string} [options.sortBy] - Field:(asc|desc), comma‑separated
-   * @param {string} [options.populate] - Paths to populate, comma‑separated
-   * @param {number} [options.limit=10] - Max results per page
-   * @param {number} [options.page=1] - Page number
-   * @param {boolean|Object} [options.lean=false] - lean mode
-   * @param {Object} [options.projection={}] - fields to return
-   * @param {Object} [options.populateProjection={}] - fields for populated docs
-   * @param {boolean} [options.shuffle=false] - if true, randomly shuffle the page’s results
-   * @returns {Promise<QueryResult>}
-   */
-    schema.statics.paginate = async function (filter = {}, options = {}) {
-        const defaultLimit = 10;
-        const maxLimit = 100;
 
-        // 1) build sort string
+    schema.statics.paginate = async function(filter = {}, options = {}) {
+        const defaultLimit = 10;
+        const maxLimit     = 100;
+
+        // 1) Build sort string (ignored when shuffle=true)
         let sort = 'createdAt';
-        if (options.sortBy) {
+        if (!options.shuffle && options.sortBy) {
             sort = options.sortBy
                 .split(',')
                 .map(pair => {
@@ -41,13 +28,13 @@ const paginate = schema => {
                 .join(' ');
         }
 
-        // 2) lean flag
+        // 2) Lean support
         if (options.lean === true) {
             options.lean = { getters: true };
         }
         const { projection = {}, lean = false, shuffle = false } = options;
 
-        // 3) page & limit
+        // 3) Page / limit / skip
         const page = Number(options.page) > 0 ? Number(options.page) : 1;
         let limit = Number(options.limit) || defaultLimit;
         if (limit < -1) limit = defaultLimit;
@@ -57,42 +44,65 @@ const paginate = schema => {
             limit = null;
         }
 
-        // 4) count + docs queries
-        const countPromise = this.countDocuments(filter).exec();
-        let docsQuery = this.find(filter)
-            .sort(sort)
-            .skip(skip)
-            .limit(limit)
-            .select(projection)
-            .lean(lean);
+        // 4) Total count
+        const totalResults = await this.countDocuments(filter).exec();
 
-        // 5) populate if needed
-        if (options.populate) {
-            options.populate.split(',').forEach(path => {
-                docsQuery = docsQuery.populate({
-                    path: path.split('.').reverse().reduce((a, b) => ({ path: b, populate: a })),
-                    select: options.populateProjection || {},
-                });
-            });
-        }
-
-        // 6) execute both
-        const [ totalResults, results ] = await Promise.all([
-            countPromise,
-            docsQuery.exec()
-        ]);
-
-        // 7) optionally shuffle results in‑memory
-        if (shuffle && Array.isArray(results)) {
-            for (let i = results.length - 1; i > 0; i--) {
-                const j = Math.floor(Math.random() * (i + 1));
-                [results[i], results[j]] = [results[j], results[i]];
+        // 5) Fetch docs
+        let results;
+        if (shuffle) {
+            // Use aggregation to randomize at the DB level
+            const pipeline = [
+                { $match: filter },
+                // add random score
+                { $addFields: { __rand: { $rand: {} } } },
+                // sort by that random score
+                { $sort: { __rand: 1 } }
+            ];
+            if (skip != null)    pipeline.push({ $skip: skip });
+            if (limit != null)   pipeline.push({ $limit: limit });
+            if (Object.keys(projection).length) {
+                pipeline.push({ $project: projection });
             }
+            // run it
+            results = await this.aggregate(pipeline).exec();
+            // clean up the temporary field
+            results.forEach(doc => delete doc.__rand);
+
+            // optional: perform Mongoose populate if requested
+            if (options.populate) {
+                const paths = options.populate.split(',');
+                for (const path of paths) {
+                    results = await this.populate(results, {
+                        path: path.trim(),
+                        select: options.populateProjection || {}
+                    });
+                }
+            }
+        } else {
+            // normal find‑based pagination
+            let query = this.find(filter)
+                .sort(sort)
+                .skip(skip)
+                .limit(limit)
+                .select(projection)
+                .lean(lean);
+
+            // populate if needed
+            if (options.populate) {
+                options.populate.split(',').forEach(p => {
+                    query = query.populate({
+                        path: p.trim().split('.').reverse().reduce((a,b) => ({ path: b, populate: a })),
+                        select: options.populateProjection || {}
+                    });
+                });
+            }
+
+            results = await query.exec();
         }
 
-        // 8) build pagination meta
+        // 6) Build metadata
+        const hasMore    = limit && skip + limit < totalResults;
         const totalPages = limit ? Math.ceil(totalResults / limit) : 1;
-        const hasMore = limit && skip + limit < totalResults;
 
         return {
             results,

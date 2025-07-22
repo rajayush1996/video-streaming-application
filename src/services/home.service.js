@@ -549,7 +549,7 @@ exports.getTrendingVideos = async (filter) => {
     // }
 
     try{
-        const { page, limit, category } = filter;
+        const { page, limit, category, mediaType } = filter;
         const query = {
             page, limit, lean: true
         }
@@ -557,6 +557,9 @@ exports.getTrendingVideos = async (filter) => {
         const currFilter = {}
         if(category) {
             currFilter.category = category;
+        }
+        if(mediaType) {
+            currFilter.mediaType = mediaType;
         }
         const result = await getVideoMetadata(currFilter, query);
         return result;
