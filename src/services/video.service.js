@@ -158,7 +158,7 @@ exports.getAllVideos = async (options) => {
         //recommend true based on logic
         const { page = 1, limit = 10, category, recommend, selectedMediaId = '' } = options;
         const filter = {}
-        if(category) {
+        if(category && category !== 'all') {
             filter.category = category;
         }
         filter.mediaType = 'video'
