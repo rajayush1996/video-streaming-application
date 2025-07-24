@@ -28,10 +28,10 @@ router.use(auth('admin'));
 router.get('/', validate(getMediaMetadataSchema), mediaMetaController.getMediaMetadata);
 
 /**
- * @route PATCH /api/v1/media-metadata/:id
+ * @route put /api/v1/media-metadata/:id
  * @desc Update media metadata
  */
-router.patch('/:id', validate(updateMediaMetadataSchema), mediaMetaController.updateMediaMetadata);
+router.put('/:id', validate(updateMediaMetadataSchema), mediaMetaController.updateMediaMetadata);
 
 /**
  * @route DELETE /api/v1/media-metadata/:id

@@ -163,7 +163,6 @@ exports.getAllVideos = async (options) => {
         }
         filter.mediaType = 'video'
 
-        console.log("🚀 ~ :193 ~ exports.getAllVideos= ~ search:", search)
 
         // add search‐by‐title or description
         if (search.trim()) {

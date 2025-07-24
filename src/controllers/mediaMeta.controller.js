@@ -6,7 +6,7 @@ const mediaMetaController = {
     getMediaMetadata: async (req, res, next) => {
         try {
         // Extract query parameters (already validated by Joi)
-            const { page, limit, sortBy, thumbnailId, mediaFileId, type } = req.query;
+            const { page, limit, sortBy, thumbnailId, mediaFileId, type, category='all' } = req.query;
         
             // Build filter
             const filter = {};
@@ -19,6 +19,7 @@ const mediaMetaController = {
             if (limit) options.limit = parseInt(limit);
             if (sortBy) options.sortBy = sortBy;
             if (type) options.type = type;
+            if(category) options.category = category;
             // Get paginated results with URLs
             const result = await mediaMetaService.getMediaMetadata(filter, options);
         
@@ -38,6 +39,7 @@ const mediaMetaController = {
             const updateBody = req.body;
         
             const result = await mediaMetaService.updateMediaMetadata(id, updateBody);
+            console.log("🚀 ~ :41 ~ updateMediaMetadata: ~ result:", result);
         
             return res.status(httpStatus.OK).json({
                 data: result,

@@ -1,7 +1,6 @@
 const MediaMeta = require("../models/mediaMeta.model");
 const File = require("../models/file.model");
 const Category = require("../models/category.model");
-const mongoose = require("mongoose");
 const { formatApiResult } = require("../utils/formatApiResult.util");
 const { ApiError } = require("../features/error");
 const httpStatus = require("http-status");
@@ -12,7 +11,7 @@ const Reel = require("../models/reel.model");
 const logger = require("../features/logger");
 const utils = require("../utils");
 const { fetchVideoDataByGuid } = require("../utils/bunny.utils");
-const { createVideoMetadata, updateVideoMetadata } = require("./videoMetaData.service");
+const { createVideoMetadata, updateVideoMetadata, getVideoMetadata } = require("./videoMetaData.service");
 const { startMediaProcessing } = require("../utils/mediaProcessing");
 
 class MediaMetaService {
@@ -205,7 +204,7 @@ class MediaMetaService {
             const {
                 page = 1,
                 limit = 10,
-                sortBy = "createdAt:desc",
+                // sortBy = "createdAt:desc",
                 category,
                 type,
                 ...otherOptions
@@ -220,9 +219,9 @@ class MediaMetaService {
             delete filter.type;
 
             // 3) Default isDeleted to false, if not provided:
-            if (filter.isDeleted === undefined) {
-                filter.isDeleted = false;
-            }
+            // if (filter.isDeleted === undefined) {
+            //     filter.isDeleted = false;
+            // }
 
             if (type === "video") {
                 filter.mediaType = "video";
@@ -239,13 +238,20 @@ class MediaMetaService {
             // console.log("→ query options:", { page, limit, sortBy, ...otherOptions });
 
             // 5) Call your paginate plugin
-            const result = await MediaMeta.paginate(filter, {
+            // const result = await MediaMeta.paginate(filter, {
+            //     page,
+            //     limit,
+            //     sortBy,
+            //     lean: true,
+            //     ...otherOptions,
+            // });
+
+            const result = await getVideoMetadata(filter, {
                 page,
                 limit,
-                sortBy,
                 lean: true,
                 ...otherOptions,
-            });
+            })
 
             // 6) (optional) strip mongoose internals & enhance
             if (Array.isArray(result.results) && result.results.length) {
@@ -253,47 +259,47 @@ class MediaMetaService {
                     doc.toObject ? doc.toObject() : doc
                 );
                 result.results = formatApiResult(plain);
-                result.results = await this.enhanceWithFileUrls(result?.results);
+                // result.results = await this.enhanceWithFileUrls(result?.results);
                 result.results = await this.enhanceWithCategoryDetails(result?.results);
 
                 // Merge with video/reel data based on type
-                if (type === "video") {
-                    const videoIds = result.results.map((item) => item._id);
-                    const videos = await Video.find({
-                        "videoSpecific.mediaMetaId": { $in: videoIds },
-                    })
-                        .select("videoSpecific.duration views")
-                        .lean();
+                //     if (type === "video") {
+                //         const videoIds = result.results.map((item) => item._id);
+                //         const videos = await Video.find({
+                //             "videoSpecific.mediaMetaId": { $in: videoIds },
+                //         })
+                //             .select("videoSpecific.duration views")
+                //             .lean();
 
-                    const videoMap = new Map(
-                        videos.map((v) => [v.videoSpecific.mediaMetaId, v])
-                    );
-                    // console.log("🚀 ~ MediaMetaService ~ getMediaMetadata ~ videoMap:", videoMap);
-                    result.results = result.results.map((item) => ({
-                        ...item,
-                        duration:
-              videoMap.get(item._id)?.videoSpecific?.duration || "00:00:00",
-                        totalViews:
-              (item.views || 0) + (videoMap.get(item._id)?.views || 0),
-                    }));
-                } else if (type === "reel") {
-                    const reelIds = result.results.map((item) => item._id);
-                    const reels = await Reel.find({
-                        "reelSpecific.mediaMetaId": { $in: reelIds },
-                    })
-                        .select("reelSpecific.duration views")
-                        .lean();
+                //         const videoMap = new Map(
+                //             videos.map((v) => [v.videoSpecific.mediaMetaId, v])
+                //         );
+                //         // console.log("🚀 ~ MediaMetaService ~ getMediaMetadata ~ videoMap:", videoMap);
+                //         result.results = result.results.map((item) => ({
+                //             ...item,
+                //             duration:
+                //   videoMap.get(item._id)?.videoSpecific?.duration || "00:00:00",
+                //             totalViews:
+                //   (item.views || 0) + (videoMap.get(item._id)?.views || 0),
+                //         }));
+                //     } else if (type === "reel") {
+                //         const reelIds = result.results.map((item) => item._id);
+                //         const reels = await Reel.find({
+                //             "reelSpecific.mediaMetaId": { $in: reelIds },
+                //         })
+                //             .select("reelSpecific.duration views")
+                //             .lean();
 
-                    const reelMap = new Map(
-                        reels.map((r) => [r.reelSpecific.mediaMetaId, r])
-                    );
-                    result.results = result.results.map((item) => ({
-                        ...item,
-                        duration:
-              reelMap.get(item._id)?.reelSpecific?.duration || "00:00:00",
-                        totalViews: (item.views || 0) + (reelMap.get(item._id)?.views || 0),
-                    }));
-                }
+            //         const reelMap = new Map(
+            //             reels.map((r) => [r.reelSpecific.mediaMetaId, r])
+            //         );
+            //         result.results = result.results.map((item) => ({
+            //             ...item,
+            //             duration:
+            //   reelMap.get(item._id)?.reelSpecific?.duration || "00:00:00",
+            //             totalViews: (item.views || 0) + (reelMap.get(item._id)?.views || 0),
+            //         }));
+            //     }
             }
 
             return result;
@@ -440,25 +446,34 @@ class MediaMetaService {
    */
     async updateMediaMetadata(id, updateBody) {
         try {
-            const mediaMeta = await MediaMeta.findOne({ _id: id });
-            if (!mediaMeta) {
-                throw new ApiError(httpStatus.NOT_FOUND, "Media metadata not found");
-            }
+            // const mediaMeta = await MediaMeta.findOne({ _id: id });
+            // if (!mediaMeta) {
+            //     throw new ApiError(httpStatus.NOT_FOUND, "Media metadata not found");
+            // }
 
-            Object.assign(mediaMeta, updateBody);
-            await mediaMeta.save();
+            // Object.assign(mediaMeta, updateBody);
+            // await mediaMeta.save();
 
-            const plainObject = mediaMeta.toObject();
+            // const plainObject = mediaMeta.toObject();
+            // delete plainObject.__v;
+            // delete plainObject.$__;
+            // delete plainObject.$isNew;
+            // delete plainObject._doc;
+
+            const updatedMedia = await updateVideoMetadata(id, updateBody);
+
+            const plainObject = updatedMedia.toObject();
             delete plainObject.__v;
             delete plainObject.$__;
             delete plainObject.$isNew;
             delete plainObject._doc;
 
             const formattedResult = formatApiResult(plainObject);
-            const enhancedResult = await this.enhanceWithFileUrls([formattedResult]);
+            // const enhancedResult = await this.enhanceWithFileUrls([formattedResult]);
             const withCategory = await this.enhanceWithCategoryDetails(
-                enhancedResult
+                [formattedResult]
             );
+            console.log("🚀 ~ :478 ~ MediaMetaService ~ updateMediaMetadata ~ withCategory:", withCategory)
 
             return withCategory[0];
         } catch (error) {
@@ -654,10 +669,11 @@ class MediaMetaService {
         try {
             // Get all unique category names and convert to ObjectIds
             const categoryIds = [
-                ...new Set(mediaMetadata.map((item) => item.category)),
+                ...new Set(mediaMetadata.map((item) => item?.category)),
             ]
-                .filter((id) => id && mongoose.Types.ObjectId.isValid(id))
-                .map((id) => new mongoose.Types.ObjectId(id));
+            //     .filter((id) => id && mongoose.Types.ObjectId.isValid(id))
+            //     .map((id) => new mongoose.Types.ObjectId(id));
+            // console.log("🚀 ~ :677 ~ MediaMetaService ~ enhanceWithCategoryDetails ~ categoryIds:", categoryIds)
 
             if (categoryIds.length === 0) {
                 return mediaMetadata;

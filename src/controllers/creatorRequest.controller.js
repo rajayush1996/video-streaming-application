@@ -30,7 +30,7 @@ const createRequest = async (req, res, next) => {
  */
 const getRequests = async (req, res, next) => {
     try {
-        const result = await creatorRequestService.getRequests(req.query);
+        const result = await creatorRequestService.getRequests(req.query, {});
         responseHandler(res, httpStatus.OK, 'Creator requests retrieved successfully', result);
     } catch (error) {
         logger.error('Error in getRequests controller:', error);

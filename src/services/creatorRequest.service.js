@@ -15,8 +15,10 @@ class CreatorRequestService {
         try {
             // Check if user already has a pending request
             const existingRequest = await CreatorRequest.findOne({
-                userId: requestBody.userId,
-                status: 'pending'
+                userId: requestBody?.userId,
+                status: 'pending',
+                reason: requestBody?.reason,
+                portfolio: requestBody?.portfolio
             });
 
             if (existingRequest) {
@@ -56,14 +58,16 @@ class CreatorRequestService {
      * @returns {Promise<Object>}
      */
     async getRequests(filter, options) {
+        console.log("🚀 ~ :61 ~ CreatorRequestService ~ getRequests ~ filter:", filter)
         try {
-            const requests = await CreatorRequest.paginate(filter, {
-                ...options,
-                populate: {
-                    path: 'userId',
-                    select: 'username email'
-                }
-            });
+            const requests = await CreatorRequest.paginate(filter, 
+                options,
+                // {
+                // populate: {
+                //     path: 'userId',
+                //     select: 'username email'
+                // }
+            );
             return requests;
         } catch (error) {
             logger.error('Error fetching creator requests:', error);

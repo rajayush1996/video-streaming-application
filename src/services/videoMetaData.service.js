@@ -27,7 +27,6 @@ async function getVideoMetadata(filter = {}, query) {
         if(!query.sortBy) {
             query.shuffle = true
         }
-        console.log("🚀 ~ :24 ~ getVideoMetadata ~ filter:", filter)
         
         return await VideoMetadata.paginate(filter, query);
     } catch (err) {
@@ -37,6 +36,10 @@ async function getVideoMetadata(filter = {}, query) {
 
 async function getVideoMetaDataById(id) {
     try {
+        // let objectId;
+        // if(typeof id === 'String') {
+        //     objectId = 
+        // }
         return await VideoMetadata.findOne({ _id: id });
     } catch (err) {
         throw new Error(`Error fetching VideoMetadata: ${err.message}`);
