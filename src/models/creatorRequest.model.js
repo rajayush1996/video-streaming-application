@@ -36,6 +36,14 @@ const creatorRequestSchema = new mongoose.Schema({
         type: String,
         ref: 'UserCredentials'
     },
+    contentFocus: {
+        type: String,
+        required: true
+    },
+    documents: {
+        type: [String],
+        required: true,
+    },
     reviewedAt: {
         type: Date
     },

@@ -109,7 +109,7 @@ app.use(cors({
         }
     },
     credentials: true, // Required if you're using cookies/auth headers
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
     allowedHeaders: ['Content-Type', 'Authorization'],
 }));
 // app.options('*', cors());

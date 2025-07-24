@@ -10,6 +10,8 @@ const categoryRouter = require('../admin/category.route');
 const dashboardRouter = require('../admin/dashboard.route');
 const reelsRouter = require('../admin/reels.route');
 const filesRouter = require('../admin/file.route');
+const creatorRequestRoutes = require('./creatorRequest.route');
+
 
 const userAdminRouter = require('./userAdmin.route');
 
@@ -33,5 +35,7 @@ router.use('/categories', categoryRouter);
 router.use('/dashboard', dashboardRouter);
 
 router.use('/upload', uploadRouter)
+
+router.use('/creator-requests', creatorRequestRoutes)
 
 module.exports = router; 

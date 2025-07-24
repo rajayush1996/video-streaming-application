@@ -1,15 +1,21 @@
 const Joi = require('joi');
 
 const createCreatorRequestSchema = {
-    body: Joi.object().keys({
-        reason: Joi.string().max(500).required(),
-        portfolio: Joi.string().max(1000),
-        socialLinks: Joi.object({
-            youtube: Joi.string().uri(),
+    body: Joi.object({
+        reason:       Joi.string().max(500).required(),
+        contentFocus: Joi.string().max(250).required(),
+        portfolio:    Joi.string().uri().max(1000).required(),
+        socialLinks:  Joi.object({
+            youtube:   Joi.string().uri(),
             instagram: Joi.string().uri(),
-            twitter: Joi.string().uri(),
-            website: Joi.string().uri()
+            twitter:   Joi.string().uri(),
+            website:   Joi.string().uri(),
         })
+            .optional(),
+        documents:    Joi.array()
+            .items(Joi.string().uri())
+            .min(1)
+            .required(),
     })
 };
 

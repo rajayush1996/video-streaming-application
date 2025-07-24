@@ -3,7 +3,7 @@ const router = express.Router();
 const { mediaMetaController } = require('../../controllers/mediaMeta.controller');
 const { validate } = require('../../middlewares/validation.middleware');
 const mediaMetaValidation = require('../../validations/mediaMeta.validation');
-const auth = require('../../middlewares/auth.middleware');
+// const auth = require('../../middlewares/auth.middleware');
 const isCreator = require('../../middlewares/creator.middleware');
 
 /**
