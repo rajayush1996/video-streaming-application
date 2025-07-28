@@ -19,7 +19,7 @@ const creatorRequestSchema = new mongoose.Schema({
     },
     reason: {
         type: String,
-        required: true,
+        // required: true,
         maxlength: 500
     },
     portfolio: {
@@ -38,7 +38,7 @@ const creatorRequestSchema = new mongoose.Schema({
     },
     contentFocus: {
         type: String,
-        required: true
+        // required: true
     },
     documents: {
         type: [String],
@@ -50,6 +50,15 @@ const creatorRequestSchema = new mongoose.Schema({
     rejectionReason: {
         type: String,
         maxlength: 500
+    },
+    name: {
+        type: String
+    },
+    idProof: {
+        type: String
+    },
+    photo: {
+        type: String
     }
 }, {
     timestamps: true,

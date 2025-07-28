@@ -2,9 +2,9 @@ const Joi = require('joi');
 
 const createCreatorRequestSchema = {
     body: Joi.object({
-        reason:       Joi.string().max(500).required(),
-        contentFocus: Joi.string().max(250).required(),
-        portfolio:    Joi.string().uri().max(1000).required(),
+        reason:       Joi.string().max(500),
+        contentFocus: Joi.string().max(250),
+        portfolio:    Joi.string().uri().max(1000),
         socialLinks:  Joi.object({
             youtube:   Joi.string().uri(),
             instagram: Joi.string().uri(),
@@ -16,6 +16,9 @@ const createCreatorRequestSchema = {
             .items(Joi.string().uri())
             .min(1)
             .required(),
+        idProof: Joi.string(),
+        name: Joi.string(),
+        photo: Joi.string(),
     })
 };
 

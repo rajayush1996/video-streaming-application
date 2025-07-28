@@ -17,8 +17,6 @@ class CreatorRequestService {
             const existingRequest = await CreatorRequest.findOne({
                 userId: requestBody?.userId,
                 status: 'pending',
-                reason: requestBody?.reason,
-                portfolio: requestBody?.portfolio
             });
 
             if (existingRequest) {
