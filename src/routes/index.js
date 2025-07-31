@@ -7,6 +7,7 @@ const adminRoutes = require('./admin');
 const userRoutes = require('./user');
 const creatorRequestRoutes = require('./creatorRequest.route');
 const notificationRoutes = require('./v1/notification.route');
+const webhookRoutes = require('./webhook.route');
 
 /**
  * GET v1/status
@@ -26,5 +27,7 @@ router.use('/creator-requests', creatorRequestRoutes);
 
 // Notification routes
 router.use('/notifications', notificationRoutes);
+
+router.use('/webhooks', webhookRoutes);
 
 module.exports = router;

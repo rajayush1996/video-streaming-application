@@ -10,9 +10,9 @@ const Video = require("../models/video.model");
 const Reel = require("../models/reel.model");
 const logger = require("../features/logger");
 const utils = require("../utils");
-const { fetchVideoDataByGuid } = require("../utils/bunny.utils");
+// const { fetchVideoDataByGuid } = require("../utils/bunny.utils");
 const { createVideoMetadata, updateVideoMetadata, getVideoMetadata } = require("./videoMetaData.service");
-const { startMediaProcessing } = require("../utils/mediaProcessing");
+// const { startMediaProcessing } = require("../utils/mediaProcessing");
 
 class MediaMetaService {
     // async createMediaMetaInfo(metaInfo, isAdmin = false) {
@@ -144,7 +144,7 @@ class MediaMetaService {
  * @param {string} [metaInfo.category]
  * @param {string} metaInfo.mediaType
  */
-    async  createMediaMetaInfo(metaInfo) {
+    async  createMediaMetaInfo(metaInfo, role) {
         // 1) immediately create a “processing” stub
         const created = await createVideoMetadata({
             guid:             metaInfo.mediaFileId,
@@ -154,35 +154,38 @@ class MediaMetaService {
             mediaType:        metaInfo.mediaType,
             processingStatus: 'processing',
             errorMessage:     null,
+            parentId:         metaInfo.userId,
+            createdBy:        role,
+            approvedStatus: role === 'admin'? true: false
         });
 
         // 2) fire‑and‑forget the polling + update
-        startMediaProcessing({
-            recordId: created._id,
-            fetchStatus: () => fetchVideoDataByGuid(metaInfo.mediaFileId),
-            buildUpdatePayload: (data) => {
-                const video = data.video;
-                return {
-                    libraryId:            video.videoLibraryId,
-                    videoUrl:             data.videoPlaylistUrl,
-                    previewUrl:           data.previewUrl,
-                    thumbnailUrl:         data.thumbnailUrl,
-                    lengthSec:            Number((video.length / video.framerate).toFixed(2)),
-                    framerate:            video.framerate,
-                    rotation:             video.rotation,
-                    width:                video.width,
-                    height:               video.height,
-                    availableResolutions: video.availableResolutions ? video.availableResolutions.split(',') : [],
-                    storageSizeBytes:     video.storageSize,
-                    outputCodecs:         video.outputCodecs.split(','),
-                    encodeProgress:       video.encodeProgress,
-                    dateUploaded:         new Date(video.dateUploaded),
-                };
-            },
-            updateRecord: updateVideoMetadata,
-            intervalMs:   10000,  // every 10s
-            maxAttempts:  240,   // up to 10 minutes
-        });
+        // startMediaProcessing({
+        //     recordId: created._id,
+        //     fetchStatus: () => fetchVideoDataByGuid(metaInfo.mediaFileId),
+        //     buildUpdatePayload: (data) => {
+        //         const video = data.video;
+        //         return {
+        //             libraryId:            video.videoLibraryId,
+        //             videoUrl:             data.videoPlaylistUrl,
+        //             previewUrl:           data.previewUrl,
+        //             thumbnailUrl:         data.thumbnailUrl,
+        //             lengthSec:            Number((video.length / video.framerate).toFixed(2)),
+        //             framerate:            video.framerate,
+        //             rotation:             video.rotation,
+        //             width:                video.width,
+        //             height:               video.height,
+        //             availableResolutions: video.availableResolutions ? video.availableResolutions.split(',') : [],
+        //             storageSizeBytes:     video.storageSize,
+        //             outputCodecs:         video.outputCodecs.split(','),
+        //             encodeProgress:       video.encodeProgress,
+        //             dateUploaded:         new Date(video.dateUploaded),
+        //         };
+        //     },
+        //     updateRecord: updateVideoMetadata,
+        //     intervalMs:   10000,  // every 10s
+        //     maxAttempts:  240,   // up to 10 minutes
+        // });
 
         // 3) return the stub immediately
         return created;
@@ -760,6 +763,7 @@ class MediaMetaService {
     }
 
     async getMediaMetaById(id) {
+        console.log("🚀 ~ :763 ~ MediaMetaService ~ getMediaMetaById ~ id:", id)
         const mediaMeta = await MediaMeta.findById(id);
         if (!mediaMeta) {
             throw new ApiError(httpStatus.NOT_FOUND, "Media metadata not found");
@@ -773,6 +777,7 @@ class MediaMetaService {
     }
 
     async updateMediaMetaById(id, updateBody) {
+        console.log("🚀 ~ :776 ~ MediaMetaService ~ updateMediaMetaById ~ updateBody:", updateBody)
         const mediaMeta = await MediaMeta.findById(id);
         if (!mediaMeta) {
             throw new ApiError(httpStatus.NOT_FOUND, "Media metadata not found");
@@ -783,6 +788,7 @@ class MediaMetaService {
     }
 
     async deleteMediaMetaById(id) {
+        console.log("🚀 ~ :788 ~ MediaMetaService ~ deleteMediaMetaById ~ id:", id)
         const mediaMeta = await MediaMeta.findById(id);
         if (!mediaMeta) {
             throw new ApiError(httpStatus.NOT_FOUND, "Media metadata not found");

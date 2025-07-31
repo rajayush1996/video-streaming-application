@@ -4,6 +4,7 @@ const logger = require("../features/logger");
 
 const mediaMetaController = {
     getMediaMetadata: async (req, res, next) => {
+        console.log("🚀 ~ :7 ~ req:", req.user);
         try {
         // Extract query parameters (already validated by Joi)
             const { page, limit, sortBy, thumbnailId, mediaFileId, type, category='all' } = req.query;
@@ -171,7 +172,7 @@ const mediaMetaController = {
         try {
             const { body } = req;
             // console.log("🚀 ~ createMediaMetaDetails: ~ body:", body);
-            const isAdmin = req.user?.role === 'admin';
+            const role = req.user?.role;
             
             // Add userId from JWT authentication
             if (req.user && req.user.id) {
@@ -180,10 +181,10 @@ const mediaMetaController = {
                 logger.warn("No user ID found in JWT token for media upload");
             }
             
-            const result = await mediaMetaService.createMediaMetaInfo(body, isAdmin);
+            const result = await mediaMetaService.createMediaMetaInfo(body, role);
             return res.status(httpStatus.OK).json({
                 success: true,
-                message: isAdmin ? 'Media created and approved successfully' : 'Media created and pending approval',
+                message: role === 'admin' ? 'Media created and approved successfully' : 'Media created and pending approval',
                 data: result
             });
         } catch (error) {

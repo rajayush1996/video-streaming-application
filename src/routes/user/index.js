@@ -1,6 +1,8 @@
 const express = require('express');
 const router = express.Router();
 const authRoutes = require('./auth.route');
+const auth = require('../../middlewares/auth.middleware');
+
 
 // Import route modules
 const uploadRoutes = require('./upload.route');
@@ -28,7 +30,7 @@ router.use('/upload', uploadRoutes);
 router.use('/blogs', blogRoutes);
 
 // Media routes (public access)
-router.use('/media', mediaMetaRoutes);
+router.use('/media-metadata', auth('creator'), mediaMetaRoutes);
 
 // Reels routes (public access)
 router.use('/reels', reelsRoutes);

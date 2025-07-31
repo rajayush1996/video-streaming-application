@@ -61,9 +61,24 @@ async function updateVideoMetadata(id, update) {
     ).exec();
 }
 
+/**
+ * Updates an existing video metadata record by guid.
+ * @param {string} guid the video guid
+ * @param {Object} update fields to update
+ * @returns {Promise<Object|null>} the updated document
+ */
+async function updateVideoMetadataByGuid(guid, update) {
+    return VideoMetadata.findOneAndUpdate(
+        { guid },
+        { $set: update },
+        { new: true, runValidators: true }
+    ).exec();
+}
+
 module.exports = {
     createVideoMetadata,
     getVideoMetadata,
     getVideoMetaDataById,
-    updateVideoMetadata
+    updateVideoMetadata,
+    updateVideoMetadataByGuid
 };

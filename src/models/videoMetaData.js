@@ -7,6 +7,8 @@ const VideoMetadataSchema = new mongoose.Schema({
     // BunnyCDN identifiers
     libraryId:   { type: Number, index: true },
     guid:        { type: String, required: true, unique: true },
+    visibility: { type: String, required: true, default: true },
+    approvedStatus: { type: Boolean, default: false },
 
     // Basic info
     title:       { type: String },
@@ -25,7 +27,7 @@ const VideoMetadataSchema = new mongoose.Schema({
     width:            { type: Number },
     height:           { type: Number },
     availableResolutions: [String], 
-    mediaId: { type: String },          // e.g. ['240p','360p','720p']
+    mediaId: { type: String },   
 
     // Storage & processing info
     storageSizeBytes: { type: Number },
@@ -38,8 +40,10 @@ const VideoMetadataSchema = new mongoose.Schema({
     description: { type: String },
     mediaType: { type: String },
     processingStatus: { type: String, enum: ['uploading', 'processing', 'done'] },
+    createBy: { type: String, enum: ['admin', 'user', 'creator'] }
 }, {
-    timestamps: true    // adds createdAt / updatedAt
+    timestamps: true,   // adds createdAt / updatedAt
+    strict: false
 });
 
 VideoMetadataSchema.plugin(toJSON);

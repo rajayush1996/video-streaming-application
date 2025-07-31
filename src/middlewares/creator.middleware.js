@@ -1,5 +1,5 @@
 const httpStatus = require('http-status');
-const { UserCredentials } = require('../models');
+const UserCredentials = require('../models/userCredentials.model');
 const  { ApiError } = require('../features/error');
 
 const isCreator = async (req, res, next) => {
