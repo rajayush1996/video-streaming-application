@@ -156,7 +156,7 @@ class MediaMetaService {
             errorMessage:     null,
             parentId:         metaInfo.userId,
             createdBy:        role,
-            approvedStatus: role === 'admin'? true: false
+            approvedStatus: role === 'admin'? 'approved': 'pending'
         });
 
         // 2) fire‑and‑forget the polling + update
@@ -659,8 +659,8 @@ class MediaMetaService {
     }
 
     async getApprovedMedia(filter = {}, options = {}) {
-        const approvedFilter = { ...filter, status: "approved", isDeleted: false };
-        return this.getMediaMetadata(approvedFilter, options);
+        const approvedFilter = { mediaType: filter.type, approvedStatus: "approved", isDeleted: false, parentId: filter.parentId };
+        return getVideoMetadata(approvedFilter, options);
     }
 
     async getRejectedMedia(filter = {}, options = {}) {

@@ -3,7 +3,6 @@ const router = express.Router();
 const reelsController = require('../../controllers/reels.controller');
 const { validate } = require('../../middlewares/validation.middleware');
 const reelsValidation = require('../../validations/reels.validation');
-const auth = require('../../middlewares/auth.middleware');
 const isCreator = require('../../middlewares/creator.middleware');
 
 /**

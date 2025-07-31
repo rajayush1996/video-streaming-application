@@ -24,6 +24,8 @@ async function createVideoMetadata(data) {
 async function getVideoMetadata(filter = {}, query) {
     try {
         filter.processingStatus = 'done';
+        filter.approvedStatus = 'approved';
+        filter.isDeleted = false;
         if(!query.sortBy) {
             query.shuffle = true
         }

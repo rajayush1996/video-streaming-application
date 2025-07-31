@@ -142,7 +142,9 @@ const mediaMetaController = {
 
     getApprovedMedia: async (req, res, next) => {
         try {
-            const result = await mediaMetaService.getApprovedMedia(req.query);
+            const filter = { parentId: req.user.id, ...req.query };
+
+            const result = await mediaMetaService.getApprovedMedia(filter);
             res.status(httpStatus.OK).json({
                 success: true,
                 message: 'Approved media retrieved successfully',

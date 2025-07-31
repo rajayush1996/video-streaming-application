@@ -1,5 +1,5 @@
 const express = require('express');
-const auth = require('../../middlewares/auth.middleware');
+// const auth = require('../../middlewares/auth.middleware');
 const isCreator = require('../../middlewares/creator.middleware');
 const uploadController = require('../../controllers/upload.controller');
 

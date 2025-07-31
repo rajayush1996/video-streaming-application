@@ -8,8 +8,8 @@ const VideoMetadataSchema = new mongoose.Schema({
     libraryId:   { type: Number, index: true },
     guid:        { type: String, required: true, unique: true },
     visibility: { type: String, required: true, default: true },
-    approvedStatus: { type: Boolean, default: false },
-
+    approvedStatus: { type: String, default: 'pending', enum: ['pending', 'approved', 'rejected'] },
+    rejectedReason: { type: String },
     // Basic info
     title:       { type: String },
     description: { type: String },
@@ -32,7 +32,9 @@ const VideoMetadataSchema = new mongoose.Schema({
     // Storage & processing info
     storageSizeBytes: { type: Number },
     outputCodecs:     [String],               // e.g. ['x264']
-    encodeProgress:   { type: Number },       // 0–100
+    encodeProgress:   { type: Number }, 
+    
+    isDeleted:  { type: Boolean, default: false },// 0–100
 
     // Timestamps
     dateUploaded:     { type: Date },
