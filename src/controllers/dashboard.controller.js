@@ -58,6 +58,54 @@ exports.getSystemStatus = async (req, res, next) => {
     }
 };
 
+
+/**
+ * Get moderation statistics
+ * @route GET /api/v1/dashboard/moderation
+ * @returns {Object} Moderation stats grouped by media type
+ */
+exports.getModerationStats = async (req, res, next) => {
+    try {
+        const stats = await dashboardService.getModerationStats();
+        return res.status(httpStatus.OK).json({
+            success: true,
+            data: stats
+        });
+    } catch (error) {
+        logger.error('Error in getModerationStats controller:', error);
+        next(error);
+    }
+};
+
+exports.getModeration = async (req, res, next) => {
+    try {
+        const status = req.query?.status;
+        const stats = await dashboardService.getModeration(status);
+        return res.status(httpStatus.OK).json({
+            success: true,
+            data: stats
+        });
+    } catch (error) {
+        logger.error('Error in getModerationStats controller:', error);
+        next(error);
+    }
+};
+
+exports.updateModeration = async (req, res, next) => {
+    try {
+        const { id } = req.params;
+        const { status: approvedStatus, rejectedReason } = req.body;
+        const result = await dashboardService.updateModerationStatus(id, {
+            approvedStatus,
+            rejectedReason,
+        });
+        return res.status(httpStatus.OK).json({ success: true, data: result });
+    } catch (error) {
+        logger.error('Error in updateModeration controller:', error);
+        next(error);
+    }
+};
+
 /**
  * Get all dashboard data in one call
  * @route GET /api/v1/dashboard

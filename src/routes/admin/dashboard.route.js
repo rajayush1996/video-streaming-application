@@ -168,4 +168,27 @@ router.get('/status', dashboardController.getSystemStatus);
  */
 router.get('/', dashboardController.getDashboardData);
 
+/**
+ * @swagger
+ * /api/v1/dashboard/moderation:
+ *   get:
+ *     tags: [Dashboard]
+ *     summary: Get moderation statistics
+ *     description: Retrieve counts of pending, approved and rejected media
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Moderation stats retrieved successfully
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Forbidden - Admin access required
+ */
+router.get('/moderation', dashboardController.getModeration);
+router.patch('/moderation/:id/status', dashboardController.updateModeration);
+
+
+
+
 module.exports = router; 

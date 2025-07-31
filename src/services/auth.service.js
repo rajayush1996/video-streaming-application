@@ -126,8 +126,9 @@ class AuthService {
         try {
             const user = await UserCredentials.findOne({ 
                 email,
-                role: 'user'
+                // role: 'user'
             }).select('+password');
+            console.log("🚀 ~ :131 ~ AuthService ~ userSignIn ~ user:", user);
 
             if (!user) {
                 throw new UnauthorizedError('Invalid credentials');
@@ -480,6 +481,7 @@ class AuthService {
 
     // Reset Password
     async resetPassword({ newPassword, confirmPassword, token }) {
+        console.log("🚀 ~ :483 ~ AuthService ~ resetPassword ~ token:", token);
         try {
             if (newPassword !== confirmPassword) {
                 throw new BadRequestError('Passwords do not match');
