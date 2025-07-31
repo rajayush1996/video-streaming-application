@@ -28,7 +28,7 @@ exports.getUsers = async (req, res, next) => {
         
         // Build filter
         const filter = {};
-        if (role) filter.role = role.toUpperCase();
+        if (role) filter.role = role.toLowerCase();
         if (isActive !== undefined) filter.isActive = isActive === 'true';
         
         // Build options
