@@ -42,7 +42,8 @@ const VideoMetadataSchema = new mongoose.Schema({
     description: { type: String },
     mediaType: { type: String },
     processingStatus: { type: String, enum: ['uploading', 'processing', 'done'] },
-    createBy: { type: String, enum: ['admin', 'user', 'creator'] }
+    createdBy: { type: String, enum: ['admin', 'user', 'creator'] },
+    deletedAt: { type: Date },
 }, {
     timestamps: true,   // adds createdAt / updatedAt
     strict: false

@@ -5,6 +5,7 @@ const logger = require('../features/logger');
 const { ApiError } = require('../features/error');
 // const { formatApiResult } = require('../utils/formatApiResult.util');
 const { getVideoMetadata } = require('./videoMetaData.service');
+const videoMetaData = require('../models/videoMetaData');
 
 /**
  * Reels Service - Handles all reels-specific operations
@@ -136,7 +137,12 @@ class ReelsService {
     async softDeleteReel(id) {
         try {
             // Verify this is a reel before deleting
-            const reel = await MediaMeta.findOne({ 
+            // const reel = await MediaMeta.findOne({ 
+            //     _id: id, 
+            //     mediaType: 'reel',
+            //     isDeleted: false 
+            // });
+            const reel = await videoMetaData.findOne({ 
                 _id: id, 
                 mediaType: 'reel',
                 isDeleted: false 
@@ -146,7 +152,16 @@ class ReelsService {
                 throw new ApiError(httpStatus.NOT_FOUND, 'Reel not found');
             }
 
-            const deletedReel = await MediaMeta.findByIdAndUpdate(
+            // const deletedReel = await MediaMeta.findByIdAndUpdate(
+            //     id,
+            //     {
+            //         isDeleted: true,
+            //         deletedAt: new Date()
+            //     },
+            //     { new: true }
+            // );
+
+            const deletedReel = await videoMetaData.findByIdAndUpdate(
                 id,
                 {
                     isDeleted: true,
