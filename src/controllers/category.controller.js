@@ -23,6 +23,16 @@ class CategoryController {
         }
     }
 
+    async getAllCategoriesList(req, res, next) {
+        try {
+            const categories = await CategoryService.getAllCategoriesList(req.query);
+            return res.status(httpStatus.OK).json({ success: true, data: categories });
+        } catch (error) {
+            logger.error('Get all categories failed:', error);
+            next(error);
+        }
+    }
+
     async getCategoryById(req, res, next) {
         try {
             const category = await CategoryService.getCategoryById(req.params.id);
