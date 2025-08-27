@@ -42,6 +42,33 @@ class CategoryService {
         }
     }
 
+    async getAllCategoriesList({ sortBy = 'createdAt', isActive, parentId }) {
+        try {
+            const filter = {};
+            if (isActive !== undefined) filter.isActive = isActive;
+            if (parentId) filter.parentId = parentId;
+
+            let sort = 'createdAt';
+            if (sortBy) {
+                sort = sortBy
+                    .split(',')
+                    .map(pair => {
+                        const [key, order] = pair.split(':');
+                        return (order === 'desc' ? '-' : '') + key;
+                    })
+                    .join(' ');
+            }
+
+            const categories = await Category.find(filter)
+                .sort(sort)
+                .populate('parentId');
+            return categories;
+        } catch (error) {
+            logger.error('Error fetching all categories:', error);
+            throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, 'Error fetching categories');
+        }
+    }
+
     async getCategoryById(id) {
         try {
             const category = await Category.findById(id).populate('parentId');
