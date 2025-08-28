@@ -220,6 +220,7 @@ class DashboardService {
                 moderation: {
                     pendingVideos,
                     totalPending: pendingVideos + pendingReels + pendingBlogs,
+                    pendingReels,
                 },
             };
         } catch (error) {
