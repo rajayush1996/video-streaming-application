@@ -133,7 +133,7 @@ router.get(
  *           type: string
  *     responses:
  *       200:
- *         description: View count incremented successfully
+ *         description: View count update queued
  *         content:
  *           application/json:
  *             schema:

@@ -553,27 +553,10 @@ class MediaMetaService {
     }
 
     /**
-   * Increment view count for a video
+   * Increment view count directly in the database
    * @param {string} id - Media metadata ID
    * @returns {Promise<Object>} - Updated view count
    */
-    async incrementViewCount(id) {
-        try {
-            const mediaMeta = await MediaMeta.findByIdAndUpdate(
-                id,
-                { $inc: { views: 1 } }, // Increment views by 1
-                { new: true }
-            );
-
-            if (!mediaMeta) {
-                throw new ApiError(httpStatus.NOT_FOUND, "Media metadata not found");
-            }
-
-            return { views: mediaMeta.views };
-        } catch (error) {
-            throw error;
-        }
-    }
 
     async approveMedia(id, adminId) {
         const mediaMeta = await MediaMeta.findOne({ _id: id });

@@ -4,12 +4,12 @@
  * Module dependencies.
  */
 
-const { connectRabbitMQ } = require('../connection/rabbitmq.connection');
 const app = require('../app');
 const http = require('http');
 const connectDB = require('../connection/db');
 const logger = require('../features/logger');
 const socketService = require('../services/socket.service');
+const viewUpdateWorker = require('../workers/viewUpdate.worker');
 
 /**
  * Get port from environment and store in Express.
@@ -117,7 +117,7 @@ async function onListening() {
         try {
             await connectDB();
             logger.info('Database connection established successfully');
-            // await connectRabbitMQ();
+            await viewUpdateWorker.start();
         } catch (dbErr) {
             logger.error('Database connection failed:', dbErr.message);
             process.exit(1);  // Exit if database connection fails
