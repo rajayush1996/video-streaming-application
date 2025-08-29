@@ -1,4 +1,5 @@
 const mediaMetaService = require("../services/mediaMeta.service");
+const videoViewService = require("../services/videoView.service");
 const httpStatus = require("http-status");
 const logger = require("../features/logger");
 
@@ -86,10 +87,10 @@ const mediaMetaController = {
 
     incrementViewCount: async (req, res, next) => {
         try {
-            const result = await mediaMetaService.incrementViewCount(req.params.id);
-            return res.status(httpStatus.OK).json({ 
+            const result = await videoViewService.queueViewIncrement(req.params.id);
+            return res.status(httpStatus.OK).json({
                 success: true,
-                message: 'View count incremented successfully',
+                message: 'View count update queued',
                 data: result
             });
         } catch (error) {
@@ -194,20 +195,22 @@ const mediaMetaController = {
         }
     },
 
-    // getMediaMetadataById: async (req, res, next) => {
-    //     try {
-    //         const { id } = req.params;
-    //         const result = await mediaMetaService.getMediaMetadataById(id);
-    //         return res.status(httpStatus.OK).json({
-    //             success: true,
-    //             message: 'Media metadata retrieved successfully',
-    //             data: result
-    //         });
-    //     } catch (error) {
-    //         logger.error(`Error fetching media metadata for ID ${req.params.id}:`, error);
-    //         next(error);
-    //     }
-    // }
+    getMediaMetadataById: async (req, res, next) => {
+        try {
+            const { id } = req.params;
+            const result = await mediaMetaService.getMediaMetadataById(id);
+            const views = await videoViewService.getViewCount(id);
+            return res.status(httpStatus.OK).json({
+                success: true,
+                message: 'Media metadata retrieved successfully',
+                data: { ...result, views }
+            });
+        } catch (error) {
+            logger.error(`Error fetching media metadata for ID ${req.params.id}:`, error);
+            next(error);
+        }
+    }
+
 };
 
 module.exports = { mediaMetaController }; 

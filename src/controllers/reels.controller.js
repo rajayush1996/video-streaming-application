@@ -1,4 +1,5 @@
 const reelsService = require('../services/reels.service');
+const videoViewService = require('../services/videoView.service');
 const httpStatus = require('http-status');
 const pick = require('../utils/pick');
 const logger = require('../features/logger');
@@ -99,11 +100,12 @@ exports.getReelById = async (req, res, next) => {
         logger.info(`Fetching reel with ID: ${id}`);
         
         const reel = await reelsService.getReelById(id);
-        
+        const views = await videoViewService.getViewCount(id);
+
         return res.status(httpStatus.OK).json({
             success: true,
             message: 'Reel fetched successfully',
-            data: reel
+            data: { ...reel, views }
         });
     } catch (error) {
         logger.error(`Error fetching reel with ID ${req.params.id}:`, error);
@@ -234,12 +236,11 @@ exports.incrementViewCount = async (req, res, next) => {
         logger.info(`Incrementing view count for reel with ID: ${id}`);
         
         // Call the media metadata service for view increment
-        const mediaMetaService = require('../services/mediaMeta.service');
-        const result = await mediaMetaService.incrementViewCount(id);
-        
+        const result = await videoViewService.queueViewIncrement(id);
+
         return res.status(httpStatus.OK).json({
             success: true,
-            message: 'Reel view count incremented successfully',
+            message: 'Reel view count update queued',
             data: result
         });
     } catch (error) {

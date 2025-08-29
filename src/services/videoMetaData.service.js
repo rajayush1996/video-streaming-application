@@ -1,4 +1,5 @@
 const VideoMetadata = require('../models/videoMetaData');
+const videoViewService = require('./videoView.service');
 
 
 
@@ -30,7 +31,16 @@ async function getVideoMetadata(filter = {}, query) {
             query.shuffle = true
         }
         
-        return await VideoMetadata.paginate(filter, query);
+        const result = await VideoMetadata.paginate(filter, query);
+        if (result.results && result.results.length) {
+            const viewMap = await videoViewService.getViewCounts(result.results.map(r => r._id));
+            result.results = result.results.map(r => {
+                const obj = r.toObject ? r.toObject() : r;
+                obj.views = viewMap[obj._id.toString()] || 0;
+                return obj;
+            });
+        }
+        return result;
     } catch (err) {
         throw new Error(`Error fetching VideoMetadata: ${err.message}`);
     }
@@ -42,7 +52,11 @@ async function getVideoMetaDataById(id) {
         // if(typeof id === 'String') {
         //     objectId = 
         // }
-        return await VideoMetadata.findOne({ _id: id });
+        const doc = await VideoMetadata.findOne({ _id: id });
+        if (!doc) return null;
+        const obj = doc.toObject ? doc.toObject() : doc;
+        obj.views = await videoViewService.getViewCount(id);
+        return obj;
     } catch (err) {
         throw new Error(`Error fetching VideoMetadata: ${err.message}`);
     }

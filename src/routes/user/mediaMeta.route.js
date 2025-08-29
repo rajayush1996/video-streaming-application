@@ -82,7 +82,7 @@ router.get(
  *         description: Media ID
  *     responses:
  *       200:
- *         description: View count incremented successfully
+ *         description: View count update queued
  *       404:
  *         description: Media not found
  */
