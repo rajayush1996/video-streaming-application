@@ -61,10 +61,10 @@ router.get(
  *       404:
  *         description: Media not found
  */
-router.get(
-    '/:id',
-    mediaMetaController.getMediaMetadataById
-);
+// router.get(
+//     '/:id',
+//     mediaMetaController.getMediaMetadataById
+// );
 
 /**
  * @swagger

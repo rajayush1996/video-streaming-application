@@ -194,20 +194,20 @@ const mediaMetaController = {
         }
     },
 
-    getMediaMetadataById: async (req, res, next) => {
-        try {
-            const { id } = req.params;
-            const result = await mediaMetaService.getMediaMetadataById(id);
-            return res.status(httpStatus.OK).json({
-                success: true,
-                message: 'Media metadata retrieved successfully',
-                data: result
-            });
-        } catch (error) {
-            logger.error(`Error fetching media metadata for ID ${req.params.id}:`, error);
-            next(error);
-        }
-    }
+    // getMediaMetadataById: async (req, res, next) => {
+    //     try {
+    //         const { id } = req.params;
+    //         const result = await mediaMetaService.getMediaMetadataById(id);
+    //         return res.status(httpStatus.OK).json({
+    //             success: true,
+    //             message: 'Media metadata retrieved successfully',
+    //             data: result
+    //         });
+    //     } catch (error) {
+    //         logger.error(`Error fetching media metadata for ID ${req.params.id}:`, error);
+    //         next(error);
+    //     }
+    // }
 };
 
 module.exports = { mediaMetaController }; 
