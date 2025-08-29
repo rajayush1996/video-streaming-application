@@ -15,131 +15,14 @@ const { createVideoMetadata, updateVideoMetadata, getVideoMetadata } = require("
 // const { startMediaProcessing } = require("../utils/mediaProcessing");
 
 class MediaMetaService {
-    // async createMediaMetaInfo(metaInfo, isAdmin = false) {
-    //     try {
-    //         const defaultMetaInfo = {
-    //             ...metaInfo,
-    //             status: isAdmin ? 'approved' : 'pending',
-    //             reviewedBy: isAdmin ? metaInfo.userId : undefined,
-    //             reviewedAt: isAdmin ? new Date() : undefined
-    //         };
-
-    //         let newFiles = [];
-    //         if (metaInfo.mediaFileUrl) {
-    //             const fileId = metaInfo.mediaFileId;
-    //             const filesURLChunk = metaInfo.mediaFileUrl.split('/');
-    //             const fileName = filesURLChunk[filesURLChunk.length - 1];
-    //             newFiles.push({
-    //                 fileId: fileId,
-    //                 blobName: fileName,
-    //                 url: metaInfo.mediaFileUrl,
-    //                 mimeType: metaInfo.mediaFileMimeType || 'videos/mp4',
-    //                 size: metaInfo.mediaFileSize || 0,
-    //                 visibility: 'public',
-    //                 originalName: fileName,
-    //                 containerName: 'videos',
-    //                 tags: metaInfo.mediaFileTags || []
-    //             });
-    //         }
-    //         if (metaInfo.thumbnailUrl) {
-    //             const thumbId = new Date().getTime().toString() + '_thumb';
-    //             const thumbFilesURLChunk = metaInfo.thumbnailUrl.split('/');
-    //             const thumbFileName = thumbFilesURLChunk[thumbFilesURLChunk.length - 1];
-    //             newFiles.push({
-    //                 fileId: thumbId,
-    //                 blobName: thumbFileName,
-    //                 url: metaInfo.thumbnailUrl,
-    //                 mimeType: metaInfo.thumbnailMimeType || 'image/jpeg',
-    //                 size: metaInfo.thumbnailSize || 0,
-    //                 visibility: 'public',
-    //                 originalName: thumbFileName,
-    //                 containerName: 'thumbnails',
-    //                 tags: metaInfo.thumbnailTags || []
-    //             });
-    //         }
-    //         const docs = await Promise.all(
-    //             newFiles.map(file => File.create(file))
-    //         );
-    //         docs.forEach(doc => {
-    //             const docObject = doc.toObject();
-    //             if (doc.containerName === 'videos') {
-    //                 defaultMetaInfo.mediaFileId = docObject.fileId;
-    //             } else if (doc.containerName === 'thumbnails') {
-    //                 defaultMetaInfo.thumbnailId = docObject.fileId;
-    //             }
-    //         });
-    //         console.log("🚀 ~ MediaMetaService ~ createMediaMetaInfo ~ defaultMetaInfo:", defaultMetaInfo)
-
-    //         const mediaMeta = await MediaMeta.create(defaultMetaInfo);
-
-    //         // Create corresponding content based on mediaType
-    //         let content;
-    //         if (metaInfo.mediaType === 'video') {
-    //             content = await Video.create({
-    //                 _id: utils.uuid('v-'),
-    //                 title: metaInfo.title,
-    //                 description: metaInfo.description,
-    //                 author: metaInfo.userId,
-    //                 category: metaInfo.category,
-    //                 status: 'published',
-    //                 type: 'video',
-    //                 videoSpecific: {
-    //                     mediaMetaId: mediaMeta._id,
-    //                     duration: metaInfo.metadata?.duration || '00:00:00'
-    //                 }
-    //             });
-    //         } else if (metaInfo.mediaType === 'reel') {
-    //             content = await Reel.create({
-    //                 _id: utils.uuid('r-'),
-    //                 title: metaInfo.title,
-    //                 description: metaInfo.description,
-    //                 author: metaInfo.userId,
-    //                 category: metaInfo.category,
-    //                 status: 'published',
-    //                 type: 'reel',
-    //                 reelSpecific: {
-    //                     description: metaInfo.description,
-    //                     duration: metaInfo.metadata?.duration || '00:00:00',
-    //                     mediaMetaId: mediaMeta._id
-    //                 }
-    //             });
-    //         }
-
-    //         // Enhance with category details
-    //         const enhanced = await this.enhanceWithCategoryDetails([mediaMeta.toObject()]);
-
-    //         if (!isAdmin) {
-    //             // Notify admins about new media upload
-    //             socketService.notifyMediaUpload(mediaMeta);
-
-    //             // Notify user about upload status
-    //             socketService.notifyMediaStatus(
-    //                 mediaMeta.userId,
-    //                 mediaMeta._id,
-    //                 'pending',
-    //                 {
-    //                     title: mediaMeta.title,
-    //                     type: mediaMeta.type,
-    //                     message: 'Your media has been uploaded and is pending approval'
-    //                 }
-    //             );
-    //         }
-
-    //         return {
-    //             ...enhanced[0],
-    //             content
-    //         };
-    //     } catch (error) {
-    //         throw error;
-    //     }
-    // }
-
-    /**
- * Inserts a stub record, then kicks off background processing.
- *
- * @param {Object} metaInfo
- * @param {string} metaInfo.mediaFileId
- * @param {string} metaInfo.title
+/**
+   * Create media metadata information.
+   *
+   * Inserts a stub record, then kicks off background processing.
+   *
+   * @param {Object} metaInfo
+   * @param {string} metaInfo.mediaFileId
+   * @param {string} metaInfo.title
  * @param {string} [metaInfo.description]
  * @param {string} [metaInfo.category]
  * @param {string} metaInfo.mediaType
@@ -159,33 +42,6 @@ class MediaMetaService {
             approvedStatus: role === 'admin'? 'approved': 'pending'
         });
 
-        // 2) fire‑and‑forget the polling + update
-        // startMediaProcessing({
-        //     recordId: created._id,
-        //     fetchStatus: () => fetchVideoDataByGuid(metaInfo.mediaFileId),
-        //     buildUpdatePayload: (data) => {
-        //         const video = data.video;
-        //         return {
-        //             libraryId:            video.videoLibraryId,
-        //             videoUrl:             data.videoPlaylistUrl,
-        //             previewUrl:           data.previewUrl,
-        //             thumbnailUrl:         data.thumbnailUrl,
-        //             lengthSec:            Number((video.length / video.framerate).toFixed(2)),
-        //             framerate:            video.framerate,
-        //             rotation:             video.rotation,
-        //             width:                video.width,
-        //             height:               video.height,
-        //             availableResolutions: video.availableResolutions ? video.availableResolutions.split(',') : [],
-        //             storageSizeBytes:     video.storageSize,
-        //             outputCodecs:         video.outputCodecs.split(','),
-        //             encodeProgress:       video.encodeProgress,
-        //             dateUploaded:         new Date(video.dateUploaded),
-        //         };
-        //     },
-        //     updateRecord: updateVideoMetadata,
-        //     intervalMs:   10000,  // every 10s
-        //     maxAttempts:  240,   // up to 10 minutes
-        // });
 
         // 3) return the stub immediately
         return created;
@@ -221,10 +77,6 @@ class MediaMetaService {
             delete filter.category;
             delete filter.type;
 
-            // 3) Default isDeleted to false, if not provided:
-            // if (filter.isDeleted === undefined) {
-            //     filter.isDeleted = false;
-            // }
 
             if (type === "video") {
                 filter.mediaType = "video";
@@ -236,18 +88,6 @@ class MediaMetaService {
             if (category && category !== "all") {
                 filter.category = category;
             }
-
-            // console.log("→ final filter:", filter);
-            // console.log("→ query options:", { page, limit, sortBy, ...otherOptions });
-
-            // 5) Call your paginate plugin
-            // const result = await MediaMeta.paginate(filter, {
-            //     page,
-            //     limit,
-            //     sortBy,
-            //     lean: true,
-            //     ...otherOptions,
-            // });
 
             const result = await getVideoMetadata(filter, {
                 page,
@@ -262,47 +102,7 @@ class MediaMetaService {
                     doc.toObject ? doc.toObject() : doc
                 );
                 result.results = formatApiResult(plain);
-                // result.results = await this.enhanceWithFileUrls(result?.results);
                 result.results = await this.enhanceWithCategoryDetails(result?.results);
-
-                // Merge with video/reel data based on type
-                //     if (type === "video") {
-                //         const videoIds = result.results.map((item) => item._id);
-                //         const videos = await Video.find({
-                //             "videoSpecific.mediaMetaId": { $in: videoIds },
-                //         })
-                //             .select("videoSpecific.duration views")
-                //             .lean();
-
-                //         const videoMap = new Map(
-                //             videos.map((v) => [v.videoSpecific.mediaMetaId, v])
-                //         );
-                //         // console.log("🚀 ~ MediaMetaService ~ getMediaMetadata ~ videoMap:", videoMap);
-                //         result.results = result.results.map((item) => ({
-                //             ...item,
-                //             duration:
-                //   videoMap.get(item._id)?.videoSpecific?.duration || "00:00:00",
-                //             totalViews:
-                //   (item.views || 0) + (videoMap.get(item._id)?.views || 0),
-                //         }));
-                //     } else if (type === "reel") {
-                //         const reelIds = result.results.map((item) => item._id);
-                //         const reels = await Reel.find({
-                //             "reelSpecific.mediaMetaId": { $in: reelIds },
-                //         })
-                //             .select("reelSpecific.duration views")
-                //             .lean();
-
-            //         const reelMap = new Map(
-            //             reels.map((r) => [r.reelSpecific.mediaMetaId, r])
-            //         );
-            //         result.results = result.results.map((item) => ({
-            //             ...item,
-            //             duration:
-            //   reelMap.get(item._id)?.reelSpecific?.duration || "00:00:00",
-            //             totalViews: (item.views || 0) + (reelMap.get(item._id)?.views || 0),
-            //         }));
-            //     }
             }
 
             return result;
@@ -311,25 +111,25 @@ class MediaMetaService {
         }
     }
 
-    /**
-   * Get media metadata by ID
-   * @param {string} id - Media metadata ID
-   * @returns {Promise<Object>} - Media metadata with enhanced URLs
-   */
-    async getMediaMetadataById(id) {
-        const mediaMeta = await MediaMeta.findOne({ _id: id }).lean().exec();
+    //     /**
+    //    * Get media metadata by ID
+    //    * @param {string} id - Media metadata ID
+    //    * @returns {Promise<Object>} - Media metadata with enhanced URLs
+    //    */
+    //     async getMediaMetadataById(id) {
+    //         const mediaMeta = await MediaMeta.findOne({ _id: id }).lean().exec();
 
-        if (!mediaMeta) {
-            throw new ApiError(httpStatus.NOT_FOUND, "Media metadata not found");
-        }
+    //         if (!mediaMeta) {
+    //             throw new ApiError(httpStatus.NOT_FOUND, "Media metadata not found");
+    //         }
 
-        delete mediaMeta.__v;
+    //         delete mediaMeta.__v;
 
-        const formatted = formatApiResult(mediaMeta);
-        const [enhanced] = await this.enhanceWithFileUrls([formatted]);
-        const [withCategory] = await this.enhanceWithCategoryDetails([enhanced]);
-        return withCategory;
-    }
+    //         const formatted = formatApiResult(mediaMeta);
+    //         const [enhanced] = await this.enhanceWithFileUrls([formatted]);
+    //         const [withCategory] = await this.enhanceWithCategoryDetails([enhanced]);
+    //         return withCategory;
+    //     }
 
     /**
    * Enhance media metadata with file URLs
@@ -476,7 +276,6 @@ class MediaMetaService {
             const withCategory = await this.enhanceWithCategoryDetails(
                 [formattedResult]
             );
-            console.log("🚀 ~ :478 ~ MediaMetaService ~ updateMediaMetadata ~ withCategory:", withCategory)
 
             return withCategory[0];
         } catch (error) {
@@ -484,39 +283,39 @@ class MediaMetaService {
         }
     }
 
-    /**
-   * Delete media metadata (soft delete)
-   * @param {string} id - Media metadata ID
-   * @returns {Promise<Object>} - Deleted media metadata
-   */
-    async deleteMediaMetadata(id) {
-        try {
-            const mediaMeta = await MediaMeta.findOne({ _id: id });
-            if (!mediaMeta) {
-                throw new ApiError(httpStatus.NOT_FOUND, "Media metadata not found");
-            }
+    //     /**
+    //    * Delete media metadata (soft delete)
+    //    * @param {string} id - Media metadata ID
+    //    * @returns {Promise<Object>} - Deleted media metadata
+    //    */
+    //     async deleteMediaMetadata(id) {
+    //         try {
+    //             const mediaMeta = await MediaMeta.findOne({ _id: id });
+    //             if (!mediaMeta) {
+    //                 throw new ApiError(httpStatus.NOT_FOUND, "Media metadata not found");
+    //             }
 
-            // Soft delete
-            mediaMeta.isDeleted = true;
-            mediaMeta.deletedAt = new Date();
-            await mediaMeta.save();
+    //             // Soft delete
+    //             mediaMeta.isDeleted = true;
+    //             mediaMeta.deletedAt = new Date();
+    //             await mediaMeta.save();
 
-            // Convert to plain object and remove mongoose internals
-            const plainObject = mediaMeta.toObject();
-            delete plainObject.__v;
-            delete plainObject.$__;
-            delete plainObject.$isNew;
-            delete plainObject._doc;
+    //             // Convert to plain object and remove mongoose internals
+    //             const plainObject = mediaMeta.toObject();
+    //             delete plainObject.__v;
+    //             delete plainObject.$__;
+    //             delete plainObject.$isNew;
+    //             delete plainObject._doc;
 
-            // Format and enhance with URLs
-            const formattedResult = formatApiResult(plainObject);
-            const enhancedResult = await this.enhanceWithFileUrls([formattedResult]);
+    //             // Format and enhance with URLs
+    //             const formattedResult = formatApiResult(plainObject);
+    //             const enhancedResult = await this.enhanceWithFileUrls([formattedResult]);
 
-            return enhancedResult[0];
-        } catch (error) {
-            throw error;
-        }
-    }
+    //             return enhancedResult[0];
+    //         } catch (error) {
+    //             throw error;
+    //         }
+    //     }
 
     /**
    * Restore soft-deleted media metadata
@@ -557,6 +356,24 @@ class MediaMetaService {
    * @param {string} id - Media metadata ID
    * @returns {Promise<Object>} - Updated view count
    */
+
+    // async incrementViewCount(id) {
+    //     try {
+    //         const mediaMeta = await MediaMeta.findByIdAndUpdate(
+    //             id,
+    //             { $inc: { views: 1 } }, // Increment views by 1
+    //             { new: true }
+    //         );
+
+    //         if (!mediaMeta) {
+    //             throw new ApiError(httpStatus.NOT_FOUND, "Media metadata not found");
+    //         }
+
+    //         return { views: mediaMeta.views };
+    //     } catch (error) {
+    //         throw error;
+    //     }
+    // }
 
     async approveMedia(id, adminId) {
         const mediaMeta = await MediaMeta.findOne({ _id: id });
@@ -745,40 +562,40 @@ class MediaMetaService {
         }
     }
 
-    async getMediaMetaById(id) {
-        console.log("🚀 ~ :763 ~ MediaMetaService ~ getMediaMetaById ~ id:", id)
-        const mediaMeta = await MediaMeta.findById(id);
-        if (!mediaMeta) {
-            throw new ApiError(httpStatus.NOT_FOUND, "Media metadata not found");
-        }
-        return mediaMeta;
-    }
+    // async getMediaMetaById(id) {
+    //     console.log("🚀 ~ :763 ~ MediaMetaService ~ getMediaMetaById ~ id:", id)
+    //     const mediaMeta = await MediaMeta.findById(id);
+    //     if (!mediaMeta) {
+    //         throw new ApiError(httpStatus.NOT_FOUND, "Media metadata not found");
+    //     }
+    //     return mediaMeta;
+    // }
 
-    async getAllMediaMeta(filter, options) {
-        const mediaMeta = await MediaMeta.paginate(filter, options);
-        return mediaMeta;
-    }
+    // async getAllMediaMeta(filter, options) {
+    //     const mediaMeta = await MediaMeta.paginate(filter, options);
+    //     return mediaMeta;
+    // }
 
-    async updateMediaMetaById(id, updateBody) {
-        console.log("🚀 ~ :776 ~ MediaMetaService ~ updateMediaMetaById ~ updateBody:", updateBody)
-        const mediaMeta = await MediaMeta.findById(id);
-        if (!mediaMeta) {
-            throw new ApiError(httpStatus.NOT_FOUND, "Media metadata not found");
-        }
-        Object.assign(mediaMeta, updateBody);
-        await mediaMeta.save();
-        return mediaMeta;
-    }
+    // async updateMediaMetaById(id, updateBody) {
+    //     console.log("🚀 ~ :776 ~ MediaMetaService ~ updateMediaMetaById ~ updateBody:", updateBody)
+    //     const mediaMeta = await MediaMeta.findById(id);
+    //     if (!mediaMeta) {
+    //         throw new ApiError(httpStatus.NOT_FOUND, "Media metadata not found");
+    //     }
+    //     Object.assign(mediaMeta, updateBody);
+    //     await mediaMeta.save();
+    //     return mediaMeta;
+    // }
 
-    async deleteMediaMetaById(id) {
-        console.log("🚀 ~ :788 ~ MediaMetaService ~ deleteMediaMetaById ~ id:", id)
-        const mediaMeta = await MediaMeta.findById(id);
-        if (!mediaMeta) {
-            throw new ApiError(httpStatus.NOT_FOUND, "Media metadata not found");
-        }
-        await mediaMeta.remove();
-        return mediaMeta;
-    }
+    // async deleteMediaMetaById(id) {
+    //     console.log("🚀 ~ :788 ~ MediaMetaService ~ deleteMediaMetaById ~ id:", id)
+    //     const mediaMeta = await MediaMeta.findById(id);
+    //     if (!mediaMeta) {
+    //         throw new ApiError(httpStatus.NOT_FOUND, "Media metadata not found");
+    //     }
+    //     await mediaMeta.remove();
+    //     return mediaMeta;
+    // }
 }
 
 module.exports = new MediaMetaService();

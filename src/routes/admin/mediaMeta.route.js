@@ -8,7 +8,6 @@ const {
     deleteMediaMetadataSchema,
     restoreMediaMetadataSchema,
     createMediaMetadataSchema,
-    getMediaMetadataByIdSchema,
     getPendingMediaSchema,
     getApprovedMediaSchema,
     getRejectedMediaSchema,
@@ -56,9 +55,9 @@ router
     .route('/')
     .post(validate(createMediaMetadataSchema), mediaMetaController.createMediaMetaDetails);
 
-router
-    .route('/:id')
-    .get(validate(getMediaMetadataByIdSchema), mediaMetaController.getMediaMetadataById);
+// router
+//     .route('/:id')
+//     .get(validate(getMediaMetadataByIdSchema), mediaMetaController.getMediaMetadataById);
 
 router
     .route('/pending')

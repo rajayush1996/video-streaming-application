@@ -42,11 +42,12 @@ class CategoryService {
         }
     }
 
-    async getAllCategoriesList({ sortBy = 'createdAt', isActive, parentId }) {
+    async getAllCategoriesList({ sortBy = 'createdAt', isActive, parentId, type }) {
         try {
             const filter = {};
             if (isActive !== undefined) filter.isActive = isActive;
             if (parentId) filter.parentId = parentId;
+            if (type) filter.type = type;
 
             let sort = 'createdAt';
             if (sortBy) {
