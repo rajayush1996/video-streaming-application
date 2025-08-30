@@ -7,6 +7,7 @@
 const app = require('../app');
 const http = require('http');
 const connectDB = require('../connection/db');
+const { connectRabbitMQ } = require('../connection/rabbitmq.connection');
 const logger = require('../features/logger');
 const socketService = require('../services/socket.service');
 const viewUpdateWorker = require('../workers/viewUpdate.worker');
@@ -116,6 +117,7 @@ async function onListening() {
         // Critical: Attempt to connect to the database
         try {
             await connectDB();
+            await connectRabbitMQ()
             logger.info('Database connection established successfully');
             await viewUpdateWorker.start();
         } catch (dbErr) {

@@ -26,6 +26,7 @@ async function createChannel() {
 }
 
 async function connectRabbitMQ() {
+    console.log("🚀 ~ :31 ~ connectRabbitMQ ~ (config.rabbitmq.host:", (config.rabbitmq.host));
     try {
         connection = await amqp.connect(config.rabbitmq.host, {
             heartbeat: 30,       // ask RabbitMQ for a 30s heartbeat
