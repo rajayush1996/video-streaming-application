@@ -1,3 +1,4 @@
+const UserProfile = require('../models/userProfile.model');
 const VideoMetadata = require('../models/videoMetaData');
 const videoViewService = require('./videoView.service');
 
@@ -34,9 +35,32 @@ async function getVideoMetadata(filter = {}, query) {
         const result = await VideoMetadata.paginate(filter, query);
         if (result.results && result.results.length) {
             const viewMap = await videoViewService.getViewCounts(result.results.map(r => r._id));
+
+            // Collect uploader IDs from metadata
+            const parentIds = result.results
+                .map(r => (r.parentId ? r.parentId.toString() : null))
+                .filter(Boolean);
+
+            let userMap = {};
+            if (parentIds.length) {
+                const profiles = await UserProfile.find({ userId: { $in: parentIds } })
+                    .select('userId displayName avatar')
+                    .lean();
+                profiles.forEach(p => {
+                    userMap[p.userId] = {
+                        id: p.userId,
+                        displayName: p.displayName,
+                        avatar: p.avatar,
+                    };
+                });
+            }
+
             result.results = result.results.map(r => {
                 const obj = r.toObject ? r.toObject() : r;
                 obj.views = viewMap[obj._id.toString()] || 0;
+                if (obj.parentId && userMap[obj.parentId]) {
+                    obj.user = userMap[obj.parentId];
+                }
                 return obj;
             });
         }
@@ -56,6 +80,19 @@ async function getVideoMetaDataById(id) {
         if (!doc) return null;
         const obj = doc.toObject ? doc.toObject() : doc;
         obj.views = await videoViewService.getViewCount(id);
+
+        if (obj.parentId) {
+            const profile = await UserProfile.findOne({ userId: obj.parentId })
+                .select('userId displayName avatar')
+                .lean();
+            if (profile) {
+                obj.user = {
+                    id: profile.userId,
+                    displayName: profile.displayName,
+                    avatar: profile.avatar,
+                };
+            }
+        }
         return obj;
     } catch (err) {
         throw new Error(`Error fetching VideoMetadata: ${err.message}`);
