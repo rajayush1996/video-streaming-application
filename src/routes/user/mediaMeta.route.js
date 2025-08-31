@@ -88,7 +88,6 @@ router.get(
  */
 router.put(
     '/:id/view',
-    validate(mediaMetaValidation.viewMediaSchema),
     mediaMetaController.incrementViewCount
 );
 

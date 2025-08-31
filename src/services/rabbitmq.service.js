@@ -17,7 +17,7 @@ class RabbitMQService {
         if (this.connected) return;
 
         try {
-            const { host, port, user, password } = config.rabbitmq;
+            const { host } = config.rabbitmq;
             // const url = `amqp://${user}:${password}@${host}:${port}`;
             const url = host;
             

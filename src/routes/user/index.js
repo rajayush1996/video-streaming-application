@@ -30,7 +30,7 @@ router.use('/upload', uploadRoutes);
 router.use('/blogs', blogRoutes);
 
 // Media routes (public access)
-router.use('/media-metadata', auth('creator'), mediaMetaRoutes);
+router.use('/media-metadata', mediaMetaRoutes);
 
 // Reels routes (public access)
 router.use('/reels', reelsRoutes);
