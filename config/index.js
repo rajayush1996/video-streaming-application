@@ -138,9 +138,11 @@ const configuration = {
         port: process.env.KAFKA_PORT || envVars.KAFKA.PORT,
     },
     rabbitmq: {
+        protocol: process.env.RABBITMQ_PROTOCOL || 'amqps',
         host: process.env.RABBITMQ_HOST || envVars.RABBITMQ.HOST,
         user: process.env.RABBITMQ_USER || envVars.RABBITMQ.USER,
         password: process.env.RABBITMQ_PASSWORD || envVars.RABBITMQ.PASSWORD,
+        vhost: process.env.RABBITMQ_VHOST || '/',
         port: process.env.RABBITMQ_PORT || envVars.RABBITMQ.PORT,
     },
     smtp: {

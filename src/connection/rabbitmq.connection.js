@@ -26,12 +26,23 @@ async function createChannel() {
 }
 
 async function connectRabbitMQ() {
-    console.log("🚀 ~ :31 ~ connectRabbitMQ ~ (config.rabbitmq.host:", (config.rabbitmq.host));
+    
     try {
         connection = await amqp.connect(config.rabbitmq.host, {
             heartbeat: 30,       // ask RabbitMQ for a 30s heartbeat
             // you can also set locale, frameMax, etc. here
         });
+
+        // connection = await amqp.connect({
+        //     protocol: config.rabbitmq.protocol || 'amqps',
+        //     hostname: config.rabbitmq.host,          // goose.rmq2.cloudamqp.com
+        //     username: config.rabbitmq.user,          // cdrsoacl
+        //     password: config.rabbitmq.password,          // exact value from dashboard
+        //     vhost: config.rabbitmq.vhost,                // cdrsoacl (must exist!)
+        //     heartbeat: 30,
+        //     // optional: frameMax, locale, etc.
+        //     // NOTE: for custom TLS, you'd pass `ca`, `cert`, `key` here if required.
+        // });
 
         // catch and log connection‑level errors
         connection.on("error", (err) => {
