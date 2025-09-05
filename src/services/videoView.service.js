@@ -2,7 +2,6 @@ const VideoView = require('../models/videoView.model');
 const viewEventService = require('./viewEvent.service');
 
 async function incrementViewCountInDb(videoId) {
-    console.log("🚀 ~ :5 ~ incrementViewCountInDb ~ videoId:", videoId);
     const doc = await VideoView.findOneAndUpdate(
         { videoId },
         { $inc: { views: 1 } },

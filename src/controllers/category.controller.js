@@ -25,6 +25,7 @@ class CategoryController {
 
     async getAllCategoriesList(req, res, next) {
         try {
+            console.log("🚀 ~ :29 ~ CategoryController ~ getAllCategoriesList ~ req.query:", req.query)
             const categories = await CategoryService.getAllCategoriesList(req.query);
             return res.status(httpStatus.OK).json({ success: true, data: categories });
         } catch (error) {

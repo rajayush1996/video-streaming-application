@@ -42,10 +42,12 @@ class CategoryService {
         }
     }
 
-    async getAllCategoriesList({ sortBy = 'createdAt', isActive, parentId, type }) {
+    async getAllCategoriesList({ sortBy = 'createdAt', parentId, type }) {
+        console.log("🚀 ~ :46 ~ CategoryService ~ getAllCategoriesList ~ type:", type);
+        
         try {
             const filter = {};
-            if (isActive !== undefined) filter.isActive = isActive;
+            // if (isActive !== undefined) filter.isActive = Boolean(isActive);
             if (parentId) filter.parentId = parentId;
             if (type) filter.type = type;
 
@@ -63,6 +65,7 @@ class CategoryService {
             const categories = await Category.find(filter)
                 .sort(sort)
                 .populate('parentId');
+            console.log("🚀 ~ :68 ~ CategoryService ~ getAllCategoriesList ~ categories:", categories);
             return categories;
         } catch (error) {
             logger.error('Error fetching all categories:', error);
